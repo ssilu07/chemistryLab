@@ -1,0 +1,1644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Lab Craft</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body, #root { width: 100%; height: 100%; overflow-x: hidden; }
+  body { background: #060710; font-family: 'Courier New', monospace; -webkit-tap-highlight-color: transparent; }
+  ::-webkit-scrollbar { display: none; }
+  button:active { transform: scale(0.97); }
+  @keyframes popIn { 0%{transform:scale(.7);opacity:0}100%{transform:scale(1);opacity:1} }
+  @keyframes fadeUp { 0%{transform:translateY(16px);opacity:0}100%{transform:translateY(0);opacity:1} }
+  @keyframes shake { 0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)} }
+  @keyframes hintPulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,230,118,0)}50%{box-shadow:0 0 0 4px rgba(0,230,118,.15)} }
+  @keyframes slideDown { 0%{transform:translate(-50%,-30px);opacity:0}100%{transform:translate(-50%,0);opacity:1} }
+  @keyframes spin { 0%{transform:rotate(0)}100%{transform:rotate(360deg)} }
+  @keyframes pulse { 0%,100%{opacity:.6}50%{opacity:1} }
+  @keyframes float { 0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)} }
+  @keyframes glow { 0%,100%{box-shadow:0 0 20px rgba(0,230,118,.4),0 0 40px rgba(0,230,118,.2)}50%{box-shadow:0 0 30px rgba(0,230,118,.7),0 0 60px rgba(0,230,118,.35)} }
+  .splash-wrap{position:fixed;inset:0;background:radial-gradient(ellipse at center,#0d1226 0%,#060710 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Courier New',monospace;z-index:9999}
+  .splash-flask{font-size:64px;animation:float 2.4s ease-in-out infinite;filter:drop-shadow(0 0 18px rgba(0,230,118,.55))}
+  .splash-title{margin-top:18px;font-size:26px;font-weight:900;letter-spacing:3px;color:#00e676;text-shadow:0 0 14px rgba(0,230,118,.6)}
+  .splash-sub{margin-top:6px;font-size:13px;letter-spacing:2px;color:#7a8599}
+  .splash-spinner{margin-top:30px;width:44px;height:44px;border:3px solid rgba(0,230,118,.15);border-top-color:#00e676;border-radius:50%;animation:spin 1s linear infinite}
+  .splash-msg{margin-top:14px;font-size:13px;color:#5a6378;letter-spacing:1px;animation:pulse 1.6s ease-in-out infinite}
+</style>
+</head>
+<body>
+<div id="root">
+  <div class="splash-wrap">
+    <div class="splash-flask">⚗️</div>
+    <div class="splash-title">LAB CRAFT</div>
+    <div class="splash-sub">v1.0</div>
+    <div class="splash-spinner"></div>
+    <div class="splash-msg">Loading engine...</div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+
+<script type="text/babel">
+
+const { useState, useRef, useCallback, useEffect, useMemo } = React;
+
+/* ═══ ANDROID BACK NAVIGATION STACK ═══
+ * Components register a handler via window.pushBackHandler(fn).
+ * The native side calls window.handleAndroidBack() on every back press.
+ * Handlers are walked top-of-stack first; the first one that returns true
+ * "consumes" the back press. If none consume, the app exits via Android.exitApp().
+ */
+window._backHandlers = window._backHandlers || [];
+window.pushBackHandler = function(fn) {
+  window._backHandlers.push(fn);
+  return function unregister() {
+    var i = window._backHandlers.indexOf(fn);
+    if (i >= 0) window._backHandlers.splice(i, 1);
+  };
+};
+window.handleAndroidBack = function() {
+  for (var i = window._backHandlers.length - 1; i >= 0; i--) {
+    try {
+      if (window._backHandlers[i]()) return true;
+    } catch (e) {}
+  }
+  // Nothing handled — exit the app
+  if (window.Android && typeof window.Android.exitApp === "function") {
+    window.Android.exitApp();
+  }
+  return true;
+};
+
+
+/* ═══ PERIODIC TABLE (118 elements) ═══ */
+const CC = {
+  "Alkali Metal": "#ff6d00", "Alkaline Earth": "#ffd600",
+  "Transition Metal": "#42a5f5", "Post-Transition": "#66bb6a",
+  "Metalloid": "#ab47bc", "Nonmetal": "#26c6da",
+  "Halogen": "#ec407a", "Noble Gas": "#7e57c2",
+  "Lanthanide": "#8d6e63", "Actinide": "#78909c",
+};
+
+const PE = [
+  [1,"H","Hydrogen",1.008,"Nonmetal",1,1,"1s1",-259,-253,0.09,1766,"75% of all matter in the universe"],
+  [2,"He","Helium",4.003,"Noble Gas",1,18,"1s2",-272,-269,0.18,1868,"Second most abundant element"],
+  [3,"Li","Lithium",6.941,"Alkali Metal",2,1,"[He]2s1",180,1342,0.53,1817,"Lightest metal, floats on water"],
+  [4,"Be","Beryllium",9.012,"Alkaline Earth",2,2,"[He]2s2",1287,2469,1.85,1798,"X-ray windows are made of Be"],
+  [5,"B","Boron",10.81,"Metalloid",2,13,"[He]2s2 2p1",2076,3927,2.34,1808,"Borax used for cleaning 4000+ yrs"],
+  [6,"C","Carbon",12.01,"Nonmetal",2,14,"[He]2s2 2p2",3550,4027,2.27,-1,"Diamond and graphite are both pure C"],
+  [7,"N","Nitrogen",14.01,"Nonmetal",2,15,"[He]2s2 2p3",-210,-196,1.25,1772,"78% of air is nitrogen"],
+  [8,"O","Oxygen",16.0,"Nonmetal",2,16,"[He]2s2 2p4",-218,-183,1.43,1774,"Liquid oxygen is pale blue"],
+  [9,"F","Fluorine",19.0,"Halogen",2,17,"[He]2s2 2p5",-220,-188,1.7,1886,"Most reactive element"],
+  [10,"Ne","Neon",20.18,"Noble Gas",2,18,"[He]2s2 2p6",-249,-246,0.9,1898,"Neon signs glow red-orange"],
+  [11,"Na","Sodium",22.99,"Alkali Metal",3,1,"[Ne]3s1",98,883,0.97,1807,"Explodes in water!"],
+  [12,"Mg","Magnesium",24.31,"Alkaline Earth",3,2,"[Ne]3s2",650,1091,1.74,1755,"Burns with blinding white flame"],
+  [13,"Al","Aluminium",26.98,"Post-Transition",3,13,"[Ne]3s2 3p1",660,2519,2.7,1825,"Once more valuable than gold"],
+  [14,"Si","Silicon",28.09,"Metalloid",3,14,"[Ne]3s2 3p2",1414,3265,2.33,1824,"Computer chips - Silicon Valley"],
+  [15,"P","Phosphorus",30.97,"Nonmetal",3,15,"[Ne]3s2 3p3",44,281,1.82,1669,"White P glows in the dark"],
+  [16,"S","Sulfur",32.07,"Nonmetal",3,16,"[Ne]3s2 3p4",115,445,2.07,-1,"Brimstone in the Bible"],
+  [17,"Cl","Chlorine",35.45,"Halogen",3,17,"[Ne]3s2 3p5",-101,-34,3.21,1774,"Purifies drinking water"],
+  [18,"Ar","Argon",39.95,"Noble Gas",3,18,"[Ne]3s2 3p6",-189,-186,1.78,1894,"~1% of atmosphere"],
+  [19,"K","Potassium",39.1,"Alkali Metal",4,1,"[Ar]4s1",64,759,0.86,1807,"Bananas are rich in K"],
+  [20,"Ca","Calcium",40.08,"Alkaline Earth",4,2,"[Ar]4s2",842,1484,1.55,1808,"Bones and teeth"],
+  [21,"Sc","Scandium",44.96,"Transition Metal",4,3,"[Ar]3d1 4s2",1541,2836,2.99,1879,"Aerospace alloys"],
+  [22,"Ti","Titanium",47.87,"Transition Metal",4,4,"[Ar]3d2 4s2",1668,3287,4.51,1791,"Strong as steel, 45% lighter"],
+  [23,"V","Vanadium",50.94,"Transition Metal",4,5,"[Ar]3d3 4s2",1910,3407,6.0,1801,"Strengthens steel"],
+  [24,"Cr","Chromium",52.0,"Transition Metal",4,6,"[Ar]3d5 4s1",1907,2671,7.15,1797,"Chrome plating"],
+  [25,"Mn","Manganese",54.94,"Transition Metal",4,7,"[Ar]3d5 4s2",1246,2061,7.3,1774,"Steel and batteries"],
+  [26,"Fe","Iron",55.85,"Transition Metal",4,8,"[Ar]3d6 4s2",1538,2862,7.87,-1,"Earths core is mostly iron"],
+  [27,"Co","Cobalt",58.93,"Transition Metal",4,9,"[Ar]3d7 4s2",1495,2927,8.86,1735,"Deep blue in glass"],
+  [28,"Ni","Nickel",58.69,"Transition Metal",4,10,"[Ar]3d8 4s2",1455,2913,8.91,1751,"US nickels = 75% copper"],
+  [29,"Cu","Copper",63.55,"Transition Metal",4,11,"[Ar]3d10 4s1",1085,2562,8.96,-1,"First metal used by humans"],
+  [30,"Zn","Zinc",65.38,"Transition Metal",4,12,"[Ar]3d10 4s2",420,907,7.13,1746,"Galvanized steel coating"],
+  [31,"Ga","Gallium",69.72,"Post-Transition",4,13,"[Ar]3d10 4s2 4p1",30,2204,5.91,1875,"Melts in your hand at 30C"],
+  [32,"Ge","Germanium",72.63,"Metalloid",4,14,"[Ar]3d10 4s2 4p2",938,2833,5.32,1886,"Fiber optics"],
+  [33,"As","Arsenic",74.92,"Metalloid",4,15,"[Ar]3d10 4s2 4p3",817,614,5.78,1250,"Historic poison"],
+  [34,"Se","Selenium",78.97,"Nonmetal",4,16,"[Ar]3d10 4s2 4p4",221,685,4.81,1817,"Thyroid function"],
+  [35,"Br","Bromine",79.9,"Halogen",4,17,"[Ar]3d10 4s2 4p5",-7,59,3.12,1826,"Liquid at room temp"],
+  [36,"Kr","Krypton",83.8,"Noble Gas",4,18,"[Ar]3d10 4s2 4p6",-157,-153,3.75,1898,"Supermans planet namesake"],
+  [37,"Rb","Rubidium",85.47,"Alkali Metal",5,1,"[Kr]5s1",39,688,1.53,1861,"Atomic clocks"],
+  [38,"Sr","Strontium",87.62,"Alkaline Earth",5,2,"[Kr]5s2",777,1382,2.64,1790,"Red fireworks"],
+  [39,"Y","Yttrium",88.91,"Transition Metal",5,3,"[Kr]4d1 5s2",1526,3345,4.47,1794,"LED TVs"],
+  [40,"Zr","Zirconium",91.22,"Transition Metal",5,4,"[Kr]4d2 5s2",1855,4409,6.52,1789,"Cubic zirconia fake diamond"],
+  [41,"Nb","Niobium",92.91,"Transition Metal",5,5,"[Kr]4d4 5s1",2477,4744,8.57,1801,"MRI magnets"],
+  [42,"Mo","Molybdenum",95.95,"Transition Metal",5,6,"[Kr]4d5 5s1",2623,4639,10.2,1781,"N-fixing bacteria"],
+  [43,"Tc","Technetium",98,"Transition Metal",5,7,"[Kr]4d5 5s2",2157,4265,11.0,1937,"First artificial element"],
+  [44,"Ru","Ruthenium",101.1,"Transition Metal",5,8,"[Kr]4d7 5s1",2334,4150,12.1,1844,"Pen nibs"],
+  [45,"Rh","Rhodium",102.9,"Transition Metal",5,9,"[Kr]4d8 5s1",1964,3695,12.4,1803,"Most expensive metal"],
+  [46,"Pd","Palladium",106.4,"Transition Metal",5,10,"[Kr]4d10",1555,2963,12.0,1803,"Absorbs 900x H2"],
+  [47,"Ag","Silver",107.9,"Transition Metal",5,11,"[Kr]4d10 5s1",962,2162,10.5,-1,"Best conductor"],
+  [48,"Cd","Cadmium",112.4,"Transition Metal",5,12,"[Kr]4d10 5s2",321,767,8.69,1817,"NiCd batteries"],
+  [49,"In","Indium",114.8,"Post-Transition",5,13,"[Kr]4d10 5s2 5p1",157,2072,7.31,1863,"Touchscreens (ITO)"],
+  [50,"Sn","Tin",118.7,"Post-Transition",5,14,"[Kr]4d10 5s2 5p2",232,2602,7.27,-1,"Tin cans"],
+  [51,"Sb","Antimony",121.8,"Metalloid",5,15,"[Kr]4d10 5s2 5p3",631,1587,6.68,-1,"Egyptian eye makeup"],
+  [52,"Te","Tellurium",127.6,"Metalloid",5,16,"[Kr]4d10 5s2 5p4",450,988,6.24,1783,"Rarest stable solid"],
+  [53,"I","Iodine",126.9,"Halogen",5,17,"[Kr]4d10 5s2 5p5",114,184,4.93,1811,"Iodized salt"],
+  [54,"Xe","Xenon",131.3,"Noble Gas",5,18,"[Kr]4d10 5s2 5p6",-112,-108,5.89,1898,"Ion propulsion"],
+  [55,"Cs","Caesium",132.9,"Alkali Metal",6,1,"[Xe]6s1",28,671,1.87,1860,"Most reactive metal"],
+  [56,"Ba","Barium",137.3,"Alkaline Earth",6,2,"[Xe]6s2",727,1897,3.62,1808,"X-ray barium meals"],
+  [57,"La","Lanthanum",138.9,"Lanthanide",8,3,"[Xe]5d1 6s2",920,3464,6.15,1839,"Camera lenses"],
+  [58,"Ce","Cerium",140.1,"Lanthanide",8,4,"[Xe]4f1 5d1 6s2",795,3443,6.77,1803,"Catalytic converters"],
+  [59,"Pr","Praseodymium",140.9,"Lanthanide",8,5,"[Xe]4f3 6s2",931,3520,6.77,1885,"Welders goggles"],
+  [60,"Nd","Neodymium",144.2,"Lanthanide",8,6,"[Xe]4f4 6s2",1016,3074,7.01,1885,"Strongest magnets"],
+  [61,"Pm","Promethium",145,"Lanthanide",8,7,"[Xe]4f5 6s2",1042,3000,7.26,1945,"All radioactive"],
+  [62,"Sm","Samarium",150.4,"Lanthanide",8,8,"[Xe]4f6 6s2",1072,1794,7.52,1879,"Heat-resistant magnets"],
+  [63,"Eu","Europium",152,"Lanthanide",8,9,"[Xe]4f7 6s2",822,1529,5.24,1901,"Euro banknotes glow UV"],
+  [64,"Gd","Gadolinium",157.3,"Lanthanide",8,10,"[Xe]4f7 5d1 6s2",1313,3273,7.9,1880,"MRI contrast agent"],
+  [65,"Tb","Terbium",158.9,"Lanthanide",8,11,"[Xe]4f9 6s2",1356,3230,8.23,1843,"Green phosphor"],
+  [66,"Dy","Dysprosium",162.5,"Lanthanide",8,12,"[Xe]4f10 6s2",1412,2567,8.55,1886,"Nuclear control rods"],
+  [67,"Ho","Holmium",164.9,"Lanthanide",8,13,"[Xe]4f11 6s2",1474,2700,8.8,1878,"Strongest magnetic moment"],
+  [68,"Er","Erbium",167.3,"Lanthanide",8,14,"[Xe]4f12 6s2",1529,2868,9.07,1842,"Fiber optic amplifiers"],
+  [69,"Tm","Thulium",168.9,"Lanthanide",8,15,"[Xe]4f13 6s2",1545,1950,9.32,1879,"Rarest lanthanide"],
+  [70,"Yb","Ytterbium",173,"Lanthanide",8,16,"[Xe]4f14 6s2",824,1196,6.9,1878,"Precise atomic clocks"],
+  [71,"Lu","Lutetium",175,"Lanthanide",8,17,"[Xe]4f14 5d1 6s2",1663,3402,9.84,1907,"PET scan detectors"],
+  [72,"Hf","Hafnium",178.5,"Transition Metal",6,4,"[Xe]4f14 5d2 6s2",2233,4603,13.3,1923,"Nuclear sub reactors"],
+  [73,"Ta","Tantalum",180.9,"Transition Metal",6,5,"[Xe]4f14 5d3 6s2",3017,5458,16.4,1802,"Smartphone capacitors"],
+  [74,"W","Tungsten",183.8,"Transition Metal",6,6,"[Xe]4f14 5d4 6s2",3422,5555,19.3,1783,"Highest melting point"],
+  [75,"Re","Rhenium",186.2,"Transition Metal",6,7,"[Xe]4f14 5d5 6s2",3186,5596,20.8,1925,"Last stable discovered"],
+  [76,"Os","Osmium",190.2,"Transition Metal",6,8,"[Xe]4f14 5d6 6s2",3033,5012,22.6,1803,"Densest element"],
+  [77,"Ir","Iridium",192.2,"Transition Metal",6,9,"[Xe]4f14 5d7 6s2",2446,4428,22.4,1803,"Dinosaur asteroid layer"],
+  [78,"Pt","Platinum",195.1,"Transition Metal",6,10,"[Xe]4f14 5d9 6s1",1768,3825,21.5,1735,"Rarer than gold"],
+  [79,"Au","Gold",197,"Transition Metal",6,11,"[Xe]4f14 5d10 6s1",1064,2856,19.3,-1,"From meteorite impacts"],
+  [80,"Hg","Mercury",200.6,"Transition Metal",6,12,"[Xe]4f14 5d10 6s2",-39,357,13.5,-1,"Only liquid metal"],
+  [81,"Tl","Thallium",204.4,"Post-Transition",6,13,"[Xe]6p1",304,1473,11.8,1861,"Extremely toxic"],
+  [82,"Pb","Lead",207.2,"Post-Transition",6,14,"[Xe]6p2",327,1749,11.3,-1,"Plumbing from plumbum"],
+  [83,"Bi","Bismuth",209,"Post-Transition",6,15,"[Xe]6p3",271,1564,9.79,1753,"Rainbow crystals"],
+  [84,"Po","Polonium",209,"Metalloid",6,16,"[Xe]6p4",254,962,9.2,1898,"Named after Poland"],
+  [85,"At","Astatine",210,"Halogen",6,17,"[Xe]6p5",302,337,7.0,1940,"Under 30g on Earth"],
+  [86,"Rn","Radon",222,"Noble Gas",6,18,"[Xe]6p6",-71,-62,9.73,1900,"Radioactive ground gas"],
+  [87,"Fr","Francium",223,"Alkali Metal",7,1,"[Rn]7s1",27,677,1.87,1939,"22-min half-life"],
+  [88,"Ra","Radium",226,"Alkaline Earth",7,2,"[Rn]7s2",700,1737,5.5,1898,"Glows in the dark"],
+  [89,"Ac","Actinium",227,"Actinide",9,3,"[Rn]6d1 7s2",1050,3200,10.1,1899,"Glows blue"],
+  [90,"Th","Thorium",232,"Actinide",9,4,"[Rn]6d2 7s2",1750,4788,11.7,1829,"Future nuclear fuel"],
+  [91,"Pa","Protactinium",231,"Actinide",9,5,"[Rn]5f2 6d1 7s2",1572,4000,15.4,1913,"Rarest element"],
+  [92,"U","Uranium",238,"Actinide",9,6,"[Rn]5f3 6d1 7s2",1135,4131,18.9,1789,"1kg U = 20000kg coal"],
+  [93,"Np","Neptunium",237,"Actinide",9,7,"[Rn]5f4 6d1 7s2",644,3902,20.2,1940,"Named after Neptune"],
+  [94,"Pu","Plutonium",244,"Actinide",9,8,"[Rn]5f6 7s2",640,3228,19.7,1940,"Nuclear weapons"],
+  [95,"Am","Americium",243,"Actinide",9,9,"[Rn]5f7 7s2",1176,2011,12.0,1944,"In smoke detectors"],
+  [96,"Cm","Curium",247,"Actinide",9,10,"[Rn]5f7 6d1 7s2",1345,3110,13.5,1944,"Named after Curies"],
+  [97,"Bk","Berkelium",247,"Actinide",9,11,"[Rn]5f9 7s2",986,2627,14.8,1949,"Berkeley, CA"],
+  [98,"Cf","Californium",251,"Actinide",9,12,"[Rn]5f10 7s2",900,1472,15.1,1950,"Gold ore detection"],
+  [99,"Es","Einsteinium",252,"Actinide",9,13,"[Rn]5f11 7s2",860,996,8.84,1952,"H-bomb debris"],
+  [100,"Fm","Fermium",257,"Actinide",9,14,"[Rn]5f12 7s2",1527,1800,9.7,1952,"Enrico Fermi"],
+  [101,"Md","Mendelevium",258,"Actinide",9,15,"[Rn]5f13 7s2",827,1100,10.3,1955,"Named after Mendeleev"],
+  [102,"No","Nobelium",259,"Actinide",9,16,"[Rn]5f14 7s2",827,1100,9.9,1966,"Alfred Nobel"],
+  [103,"Lr","Lawrencium",266,"Actinide",9,17,"[Rn]5f14 7s2 7p1",1627,3100,14.4,1961,"Cyclotron inventor"],
+  [104,"Rf","Rutherfordium",267,"Transition Metal",7,4,"[Rn]5f14 6d2 7s2",2100,5500,23.2,1964,"Nuclear physics father"],
+  [105,"Db","Dubnium",268,"Transition Metal",7,5,"[Rn]",null,null,29.3,1967,"Dubna, Russia"],
+  [106,"Sg","Seaborgium",269,"Transition Metal",7,6,"[Rn]",null,null,35.0,1974,"Named while alive"],
+  [107,"Bh","Bohrium",270,"Transition Metal",7,7,"[Rn]",null,null,37.1,1981,"Niels Bohr"],
+  [108,"Hs","Hassium",277,"Transition Metal",7,8,"[Rn]",null,null,40.7,1984,"Hesse, Germany"],
+  [109,"Mt","Meitnerium",278,"Transition Metal",7,9,"[Rn]",null,null,37.4,1982,"Lise Meitner"],
+  [110,"Ds","Darmstadtium",281,"Transition Metal",7,10,"[Rn]",null,null,34.8,1994,"Few atoms made"],
+  [111,"Rg","Roentgenium",282,"Transition Metal",7,11,"[Rn]",null,null,28.7,1994,"X-ray discoverer"],
+  [112,"Cn","Copernicium",285,"Transition Metal",7,12,"[Rn]",null,null,14.0,1996,"Maybe liquid metal"],
+  [113,"Nh","Nihonium",286,"Post-Transition",7,13,"[Rn]",null,null,16.0,2003,"First Asian element"],
+  [114,"Fl","Flerovium",289,"Post-Transition",7,14,"[Rn]",null,null,14.0,1998,"May act noble-gas-like"],
+  [115,"Mc","Moscovium",290,"Post-Transition",7,15,"[Rn]",null,null,13.5,2003,"Moscow"],
+  [116,"Lv","Livermorium",293,"Post-Transition",7,16,"[Rn]",null,null,12.9,2000,"Livermore, CA"],
+  [117,"Ts","Tennessine",294,"Halogen",7,17,"[Rn]",null,null,7.2,2010,"Tennessee"],
+  [118,"Og","Oganesson",294,"Noble Gas",7,18,"[Rn]",null,null,5.0,2002,"Heaviest element ever"],
+];
+
+/* Extra properties: [electronegativity (Pauling), atomic radius (pm), 1st ionization energy (kJ/mol)] */
+var PROP_DATA = {
+  1:[2.20,25,1312], 2:[null,31,2372],
+  3:[0.98,145,520], 4:[1.57,105,899], 5:[2.04,85,801], 6:[2.55,70,1086], 7:[3.04,65,1402], 8:[3.44,60,1314], 9:[3.98,50,1681], 10:[null,38,2081],
+  11:[0.93,180,496], 12:[1.31,150,738], 13:[1.61,125,578], 14:[1.90,110,786], 15:[2.19,100,1012], 16:[2.58,100,1000], 17:[3.16,100,1251], 18:[null,71,1521],
+  19:[0.82,220,419], 20:[1.00,180,590], 21:[1.36,160,633], 22:[1.54,140,659], 23:[1.63,135,651], 24:[1.66,140,653], 25:[1.55,140,717], 26:[1.83,140,762], 27:[1.88,135,760], 28:[1.91,135,737], 29:[1.90,135,745], 30:[1.65,135,906], 31:[1.81,130,579], 32:[2.01,125,762], 33:[2.18,115,947], 34:[2.55,115,941], 35:[2.96,115,1140], 36:[3.00,88,1351],
+  37:[0.82,235,403], 38:[0.95,200,549], 39:[1.22,180,600], 40:[1.33,155,640], 41:[1.60,145,652], 42:[2.16,145,684], 43:[1.90,135,702], 44:[2.20,130,710], 45:[2.28,135,720], 46:[2.20,140,804], 47:[1.93,160,731], 48:[1.69,155,868], 49:[1.78,155,558], 50:[1.96,145,709], 51:[2.05,145,834], 52:[2.10,140,869], 53:[2.66,140,1008], 54:[2.60,108,1170],
+  55:[0.79,260,376], 56:[0.89,215,503], 57:[1.10,195,538], 58:[1.12,185,534], 59:[1.13,185,527], 60:[1.14,185,533], 61:[1.13,185,540], 62:[1.17,185,545], 63:[1.20,185,547], 64:[1.20,180,593], 65:[1.10,175,566], 66:[1.22,175,573], 67:[1.23,175,581], 68:[1.24,175,589], 69:[1.25,175,597], 70:[1.10,175,603], 71:[1.27,175,524],
+  72:[1.30,155,659], 73:[1.50,145,761], 74:[2.36,135,770], 75:[1.90,135,760], 76:[2.20,130,840], 77:[2.20,135,880], 78:[2.28,135,870], 79:[2.54,135,890], 80:[2.00,150,1007], 81:[1.62,190,589], 82:[2.33,180,716], 83:[2.02,160,703], 84:[2.00,190,812], 85:[2.20,null,899], 86:[null,120,1037],
+  87:[0.70,260,380], 88:[0.90,215,509], 89:[1.10,195,499], 90:[1.30,180,587], 91:[1.50,180,568], 92:[1.38,175,597], 93:[1.36,175,604], 94:[1.28,175,584], 95:[1.30,175,578], 96:[1.30,null,581], 97:[1.30,null,601], 98:[1.30,null,608], 99:[1.30,null,619], 100:[1.30,null,627], 101:[1.30,null,635], 102:[1.30,null,642], 103:[1.30,null,478]
+};
+
+const EL = PE.map(function(e) {
+  var p = PROP_DATA[e[0]] || [null,null,null];
+  return { n:e[0], s:e[1], name:e[2], m:e[3], cat:e[4], row:e[5], col:e[6], config:e[7], mp:e[8], bp:e[9], d:e[10], disc:e[11], fact:e[12], en:p[0], ar:p[1], ie:p[2] };
+});
+
+/* ═══ COLOR PROPERTIES (for color-by-property mode + trends) ═══ */
+var COLOR_PROPS = {
+  category: { label:"Category" },
+  en: { label:"Electronegativity", get:function(e){return e.en}, min:0.7, max:4.0, unit:"" },
+  ar: { label:"Atomic Radius",     get:function(e){return e.ar}, min:25,  max:260, unit:" pm" },
+  ie: { label:"Ionization Energy", get:function(e){return e.ie}, min:370, max:2400, unit:" kJ/mol" },
+  mp: { label:"Melting Point",     get:function(e){return e.mp!=null&&e.mp!==-1?e.mp:null}, min:-272, max:3550, unit:"°C" },
+  bp: { label:"Boiling Point",     get:function(e){return e.bp!=null&&e.bp!==-1?e.bp:null}, min:-269, max:5600, unit:"°C" },
+  d:  { label:"Density",           get:function(e){return e.d}, min:0.08, max:23, unit:" g/cm³" },
+  m:  { label:"Atomic Mass",       get:function(e){return e.m}, min:1, max:294, unit:" u" },
+};
+
+function heatColor(v, min, max) {
+  if (v == null || isNaN(v)) return "#3a3a3a";
+  var t = (v - min) / (max - min);
+  t = Math.max(0, Math.min(1, t));
+  // Cool→warm: blue (240) → cyan → green → yellow → red (0)
+  var h = 240 * (1 - t);
+  return "hsl(" + h + ",75%,50%)";
+}
+
+/* ═══ LAB DATA ═══ */
+const ITEMS = [
+  { id:"hcl",name:"HCl",label:"Hydrochloric Acid",color:"#ff5252",icon:"\u{1F9EA}",tag:"Acid" },
+  { id:"h2so4",name:"H\u2082SO\u2084",label:"Sulfuric Acid",color:"#ff1744",icon:"\u2697\uFE0F",tag:"Acid" },
+  { id:"vinegar",name:"CH\u2083COOH",label:"Vinegar",color:"#ffeb3b",icon:"\u{1FAD7}",tag:"Acid" },
+  { id:"hno3",name:"HNO\u2083",label:"Nitric Acid",color:"#ff6e40",icon:"\u{1F536}",tag:"Acid" },
+  { id:"naoh",name:"NaOH",label:"Sodium Hydroxide",color:"#448aff",icon:"\u{1F9EB}",tag:"Base" },
+  { id:"baking_soda",name:"NaHCO\u2083",label:"Baking Soda",color:"#e0e0e0",icon:"\u{1F9C2}",tag:"Base" },
+  { id:"ca_oh_2",name:"Ca(OH)\u2082",label:"Lime Water",color:"#b0bec5",icon:"\u{1F95B}",tag:"Base" },
+  { id:"nh4cl",name:"NH\u2084Cl",label:"Ammonium Chloride",color:"#4dd0e1",icon:"\u2744\uFE0F",tag:"Salt" },
+  { id:"na",name:"Na",label:"Sodium Metal",color:"#bdbdbd",icon:"\u{1FAA8}",tag:"Metal" },
+  { id:"fe",name:"Fe",label:"Iron Nail",color:"#8d6e63",icon:"\u{1F529}",tag:"Metal" },
+  { id:"zn",name:"Zn",label:"Zinc",color:"#90a4ae",icon:"\u2699\uFE0F",tag:"Metal" },
+  { id:"mg",name:"Mg",label:"Magnesium",color:"#cfd8dc",icon:"\u{1FA84}",tag:"Metal" },
+  { id:"cu",name:"Cu",label:"Copper Wire",color:"#ef6c00",icon:"\u{1F50C}",tag:"Metal" },
+  { id:"cuso4",name:"CuSO\u2084",label:"Copper Sulfate",color:"#2196f3",icon:"\u{1F48E}",tag:"Salt" },
+  { id:"agno3",name:"AgNO\u2083",label:"Silver Nitrate",color:"#78909c",icon:"\u{1F4BF}",tag:"Salt" },
+  { id:"nacl",name:"NaCl",label:"Table Salt",color:"#fafafa",icon:"\u{1F9CA}",tag:"Salt" },
+  { id:"kmno4",name:"KMnO\u2084",label:"Potassium Permanganate",color:"#9c27b0",icon:"\u{1F7E3}",tag:"Salt" },
+  { id:"h2o",name:"H\u2082O",label:"Water",color:"#40c4ff",icon:"\u{1F4A7}",tag:"Solvent" },
+  { id:"co2",name:"CO\u2082",label:"Carbon Dioxide",color:"#90a4ae",icon:"\u{1F4A8}",tag:"Gas" },
+  { id:"o2",name:"O\u2082",label:"Oxygen",color:"#69f0ae",icon:"\u{1FAC1}",tag:"Gas" },
+  { id:"phenol",name:"Phenolphthalein",label:"Indicator",color:"#ea80fc",icon:"\u{1FA77}",tag:"Indicator" },
+  { id:"litmus",name:"Litmus",label:"Litmus Paper",color:"#ce93d8",icon:"\u{1F4C4}",tag:"Indicator" },
+  { id:"h2o2",name:"H\u2082O\u2082",label:"Hydrogen Peroxide",color:"#80deea",icon:"\u{1FAE7}",tag:"Other" },
+  { id:"mno2",name:"MnO\u2082",label:"Manganese Dioxide",color:"#616161",icon:"\u2B1B",tag:"Other" },
+];
+
+const LTAGS = ["All","Acid","Base","Metal","Salt","Solvent","Gas","Indicator","Other"];
+
+const RXN = [
+  { r:["hcl","naoh"],name:"Acid-Base Neutralization",eq:"HCl + NaOH -> NaCl + H2O",type:"neutralization",anim:"fizz",color:"#80deea",explain:"H+ meets OH- forming water + salt.",fact:"Antacids neutralize stomach HCl.",score:95,pH:7,temp:"exo",speed:"fast",safety:"Corrosive chemicals." },
+  { r:["h2so4","naoh"],name:"H2SO4 + NaOH",eq:"H2SO4 + 2NaOH -> Na2SO4 + 2H2O",type:"neutralization",anim:"fizz",color:"#64b5f6",explain:"Diprotic acid needs 2 NaOH.",fact:"200M+ tonnes H2SO4 produced yearly!",score:92,pH:7,temp:"exo",speed:"fast",safety:"Causes severe burns." },
+  { r:["vinegar","naoh"],name:"Vinegar + NaOH",eq:"CH3COOH + NaOH -> CH3COONa + H2O",type:"neutralization",anim:"fizz",color:"#a5d6a7",explain:"Weak acid makes sodium acetate.",fact:"Sodium acetate = hot ice!",score:85,pH:7,temp:"exo",speed:"medium",safety:"Safe reaction." },
+  { r:["hcl","ca_oh_2"],name:"Acid + Lime Water",eq:"2HCl + Ca(OH)2 -> CaCl2 + 2H2O",type:"neutralization",anim:"fizz",color:"#e0e0e0",explain:"Makes road salt CaCl2.",fact:"Lime water turns milky with CO2.",score:88,pH:7,temp:"exo",speed:"medium",safety:"Gloves recommended." },
+  { r:["hno3","naoh"],name:"HNO3 + NaOH",eq:"HNO3 + NaOH -> NaNO3 + H2O",type:"neutralization",anim:"fizz",color:"#ffab91",explain:"Makes fertilizer NaNO3.",fact:"NaNO3 was mined for gunpowder.",score:86,pH:7,temp:"exo",speed:"fast",safety:"HNO3 stains skin yellow." },
+  { r:["vinegar","baking_soda"],name:"Volcano Reaction!",eq:"CH3COOH + NaHCO3 -> CH3COONa + H2O + CO2",type:"gas_evolution",anim:"explode",color:"#fff59d",explain:"Classic CO2 eruption!",fact:"Baking powder makes cakes rise this way!",score:100,pH:5.5,temp:"endo",speed:"fast",safety:"Safe for beginners!" },
+  { r:["hcl","baking_soda"],name:"HCl + Baking Soda",eq:"HCl + NaHCO3 -> NaCl + H2O + CO2",type:"gas_evolution",anim:"explode",color:"#ffcc80",explain:"Stronger acid = more vigorous fizz.",fact:"Fire extinguishers use this reaction.",score:90,pH:4,temp:"exo",speed:"fast",safety:"HCl fumes irritating." },
+  { r:["na","h2o"],name:"Sodium + Water BOOM",eq:"2Na + 2H2O -> 2NaOH + H2 + fire",type:"violent",anim:"explode",color:"#ff9100",explain:"Sodium explodes in water!",fact:"Cesium is even more violent!",score:92,pH:14,temp:"exo",speed:"instant",safety:"EXPLOSION RISK! Teacher demo only!" },
+  { r:["mg","h2o"],name:"Mg + Water",eq:"Mg + 2H2O -> Mg(OH)2 + H2",type:"gas_evolution",anim:"fizz",color:"#b0bec5",explain:"Slow in cold water. Makes milk of magnesia.",fact:"Mg + steam = blinding flame!",score:78,pH:10,temp:"exo",speed:"slow",safety:"Safe with cold water." },
+  { r:["hcl","zn"],name:"Zinc + HCl",eq:"Zn + 2HCl -> ZnCl2 + H2",type:"gas_evolution",anim:"fizz",color:"#b0bec5",explain:"Classic H2 gas collection.",fact:"Zinc galvanization prevents rust.",score:88,pH:5,temp:"exo",speed:"medium",safety:"H2 is flammable!" },
+  { r:["hcl","mg"],name:"Mg + HCl Fast!",eq:"Mg + 2HCl -> MgCl2 + H2",type:"gas_evolution",anim:"explode",color:"#e0e0e0",explain:"Very fast and exothermic!",fact:"Old camera flash = burning Mg!",score:93,pH:5,temp:"exo",speed:"fast",safety:"Dont lean over the beaker!" },
+  { r:["hcl","fe"],name:"Iron + HCl",eq:"Fe + 2HCl -> FeCl2 + H2",type:"gas_evolution",anim:"fizz",color:"#a5d6a7",explain:"Slow reaction. Pale green solution.",fact:"FeCl2 turns brown in air.",score:82,pH:5,temp:"exo",speed:"slow",safety:"Safe but slow." },
+  { r:["hcl","na"],name:"HCl + Sodium",eq:"2HCl + 2Na -> 2NaCl + H2",type:"violent",anim:"explode",color:"#ffcc02",explain:"Extremely vigorous reaction!",fact:"Pop test confirms H2 gas.",score:90,pH:7,temp:"exo",speed:"instant",safety:"DANGEROUS! Teacher only!" },
+  { r:["h2so4","zn"],name:"Zn + H2SO4",eq:"Zn + H2SO4 -> ZnSO4 + H2",type:"gas_evolution",anim:"fizz",color:"#90caf9",explain:"Zinc + dilute sulfuric acid.",fact:"10C rise doubles reaction rate!",score:85,pH:5,temp:"exo",speed:"medium",safety:"Dilute acid only." },
+  { r:["h2so4","mg"],name:"Mg + H2SO4",eq:"Mg + H2SO4 -> MgSO4 + H2",type:"gas_evolution",anim:"explode",color:"#f5f5f5",explain:"Makes Epsom salt (MgSO4)!",fact:"Epsom bath salts = MgSO4!",score:90,pH:6,temp:"exo",speed:"fast",safety:"Gets hot!" },
+  { r:["cuso4","fe"],name:"Fe Displaces Cu",eq:"CuSO4 + Fe -> FeSO4 + Cu",type:"displacement",anim:"fizz",color:"#ef6c00",explain:"Blue to green. Copper coats nail.",fact:"Historical copper extraction.",score:88,pH:4,temp:"exo",speed:"slow",safety:"CuSO4 is toxic." },
+  { r:["cuso4","zn"],name:"Zn Displaces Cu",eq:"CuSO4 + Zn -> ZnSO4 + Cu",type:"displacement",anim:"fizz",color:"#e65100",explain:"Blue to colorless. Cu deposits.",fact:"K Na Mg Zn Fe Cu Ag Au reactivity.",score:90,pH:4,temp:"exo",speed:"medium",safety:"Handle carefully." },
+  { r:["cuso4","mg"],name:"Mg Displaces Cu!",eq:"CuSO4 + Mg -> MgSO4 + Cu",type:"displacement",anim:"explode",color:"#ff6e40",explain:"Big reactivity gap = vigorous!",fact:"Bigger gap = more violent!",score:95,pH:5,temp:"exo",speed:"fast",safety:"Very exothermic!" },
+  { r:["agno3","fe"],name:"Fe Displaces Ag",eq:"2AgNO3 + Fe -> Fe(NO3)2 + 2Ag",type:"displacement",anim:"fizz",color:"#9e9e9e",explain:"Silver tree grows on nail!",fact:"AgNO3 stains skin black!",score:87,pH:5,temp:"exo",speed:"slow",safety:"AgNO3 stains permanently!" },
+  { r:["cuso4","naoh"],name:"Blue Precipitate!",eq:"CuSO4 + 2NaOH -> Cu(OH)2 + Na2SO4",type:"precipitation",anim:"fizz",color:"#26c6da",explain:"Beautiful blue jelly precipitate.",fact:"Used as fungicide since 1885!",score:85,pH:10,temp:"neutral",speed:"instant",safety:"Cu compounds toxic." },
+  { r:["agno3","nacl"],name:"White Precipitate",eq:"AgNO3 + NaCl -> AgCl + NaNO3",type:"precipitation",anim:"fizz",color:"#fafafa",explain:"Classic test for chloride ions.",fact:"AgCl turns purple in sunlight!",score:88,pH:7,temp:"neutral",speed:"instant",safety:"AgNO3 corrosive." },
+  { r:["co2","ca_oh_2"],name:"Lime Water + CO2",eq:"CO2 + Ca(OH)2 -> CaCO3 + H2O",type:"precipitation",anim:"fizz",color:"#e0e0e0",explain:"Milky white confirms CO2!",fact:"Excess CO2 turns it clear again!",score:94,pH:8,temp:"neutral",speed:"medium",safety:"Safe experiment." },
+  { r:["naoh","phenol"],name:"Base turns Pink!",eq:"Phenolphthalein turns PINK in base",type:"indicator",anim:"fizz",color:"#ff1493",explain:"Structure change makes it pink!",fact:"Was used as laxative until 1999!",score:82,pH:13,temp:"neutral",speed:"instant",safety:"Safe." },
+  { r:["hcl","phenol"],name:"Acid + Indicator",eq:"Phenolphthalein stays COLORLESS",type:"indicator",anim:"fizz",color:"#ffebee",explain:"Needs pH above 8.2 for pink.",fact:"Universal indicator shows a rainbow!",score:75,pH:1,temp:"neutral",speed:"instant",safety:"Safe." },
+  { r:["hcl","litmus"],name:"Acid turns Red",eq:"Litmus turns RED in acid",type:"indicator",anim:"fizz",color:"#ef5350",explain:"Medieval chemistry test!",fact:"Litmus test = any simple test.",score:78,pH:1,temp:"neutral",speed:"instant",safety:"Safe." },
+  { r:["naoh","litmus"],name:"Base turns Blue",eq:"Litmus turns BLUE in base",type:"indicator",anim:"fizz",color:"#2979ff",explain:"Red litmus tests for base.",fact:"Litmus comes from lichen.",score:78,pH:13,temp:"neutral",speed:"instant",safety:"Safe." },
+  { r:["h2o2","mno2"],name:"Elephant Toothpaste!",eq:"2H2O2 -[MnO2]-> 2H2O + O2",type:"catalysis",anim:"explode",color:"#80deea",explain:"MnO2 catalyst releases O2 gas!",fact:"Add soap for giant foam eruption!",score:96,pH:7,temp:"exo",speed:"fast",safety:"Dilute H2O2 only!" },
+  { r:["kmno4","h2o"],name:"Purple Dissolution",eq:"KMnO4 dissolves to purple ions",type:"dissolving",anim:"fizz",color:"#9c27b0",explain:"Intense purple from tiny amounts.",fact:"Kills bacteria on contact.",score:80,pH:7,temp:"neutral",speed:"medium",safety:"Stains everything!" },
+  { r:["mg","o2"],name:"Mg Burns!",eq:"2Mg + O2 -> 2MgO + white light",type:"combustion",anim:"explode",color:"#ffffff",explain:"Blinding white flame!",fact:"Never look directly at burning Mg!",score:94,pH:null,temp:"exo",speed:"instant",safety:"BLINDING! Use tinted goggles!" },
+  { r:["nh4cl","ca_oh_2"],name:"Endothermic Ice Cold!",eq:"2NH4Cl + Ca(OH)2 -> CaCl2 + 2NH3 + 2H2O",type:"endothermic",anim:"fizz",color:"#80cbc4",explain:"Gets ICE COLD! Ammonia released.",fact:"Cold packs use similar reactions!",score:91,pH:11,temp:"endo",speed:"medium",safety:"NH3 is pungent. Ventilate!" },
+];
+
+const ACHIEVEMENTS = [
+  { id:"first",icon:"\u{1F389}",title:"First Experiment!",desc:"Complete 1 reaction",check:function(l){return l.length>=1} },
+  { id:"five",icon:"\u2B50",title:"Getting Started",desc:"Discover 5 reactions",check:function(l){return l.length>=5} },
+  { id:"ten",icon:"\u{1F31F}",title:"Lab Regular",desc:"Discover 10 reactions",check:function(l){return l.length>=10} },
+  { id:"twenty",icon:"\u{1F4AB}",title:"Chemistry Whiz",desc:"Discover 20 reactions",check:function(l){return l.length>=20} },
+  { id:"all",icon:"\u{1F451}",title:"Grand Master",desc:"All 30 reactions!",check:function(l){return l.length>=30} },
+  { id:"boom",icon:"\u{1F4A5}",title:"First Explosion",desc:"Trigger explosive reaction",check:function(l){return l.some(function(k){var r=RXN.find(function(x){return x.r.slice().sort().join("+")===k});return r&&r.anim==="explode"})} },
+  { id:"indicator_all",icon:"\u{1FA77}",title:"Color Expert",desc:"All 4 indicator reactions",check:function(l){return["hcl+phenol","naoh+phenol","hcl+litmus","naoh+litmus"].every(function(i){return l.indexOf(i)!==-1})} },
+  { id:"displace_all",icon:"\u2694\uFE0F",title:"Displacement Master",desc:"All 4 displacements",check:function(l){return["cuso4+fe","cuso4+mg","cuso4+zn","agno3+fe"].every(function(i){return l.indexOf(i)!==-1})} },
+  { id:"perfect",icon:"\u{1F4AF}",title:"Perfect Score",desc:"100-score reaction",check:function(l){return l.some(function(k){var r=RXN.find(function(x){return x.r.slice().sort().join("+")===k});return r&&r.score===100})} },
+  { id:"cold",icon:"\u{1F976}",title:"Ice Cold!",desc:"Endothermic reaction",check:function(l){return l.indexOf("ca_oh_2+nh4cl")!==-1} },
+  { id:"fire",icon:"\u{1F525}",title:"Pyromaniac",desc:"Burn something!",check:function(l){return l.indexOf("mg+o2")!==-1} },
+];
+
+const CHALLENGES = [
+  { id:"c1",text:"Find the Volcano",target:"baking_soda+vinegar" },
+  { id:"c2",text:"White precipitate",target:"agno3+nacl" },
+  { id:"c3",text:"Endothermic reaction",target:"ca_oh_2+nh4cl" },
+  { id:"c4",text:"Turn indicator PINK",target:"naoh+phenol" },
+  { id:"c5",text:"Displace copper",target:"cuso4+fe" },
+  { id:"c6",text:"Burn metal in O2",target:"mg+o2" },
+  { id:"c7",text:"Elephant toothpaste",target:"h2o2+mno2" },
+  { id:"c8",text:"Lime water CO2 test",target:"ca_oh_2+co2" },
+];
+
+/* ═══ SOUND ═══ */
+/* Shared audio context (created lazily, resumed on demand) */
+var _audioCtx = null;
+var _noiseBuffer = null;
+function getAudioCtx() {
+  if (!_audioCtx) {
+    try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { return null; }
+  }
+  if (_audioCtx && _audioCtx.state === "suspended") { try { _audioCtx.resume(); } catch(e){} }
+  return _audioCtx;
+}
+function getNoiseBuffer(ctx) {
+  if (_noiseBuffer) return _noiseBuffer;
+  var len = ctx.sampleRate * 2;
+  _noiseBuffer = ctx.createBuffer(1, len, ctx.sampleRate);
+  var d = _noiseBuffer.getChannelData(0);
+  for (var i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  return _noiseBuffer;
+}
+
+/* Single bubble pop (used inside fizz) */
+function _bubble(ctx, t, freq, amp) {
+  var o = ctx.createOscillator();
+  var g = ctx.createGain();
+  o.type = "sine";
+  o.frequency.setValueAtTime(freq * 2.2, t);
+  o.frequency.exponentialRampToValueAtTime(Math.max(60, freq * 0.5), t + 0.08);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(amp, t + 0.005);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(t); o.stop(t + 0.14);
+}
+
+/* Carbonated fizz: hissing noise + many small bubble pops */
+function playFizz() {
+  var ctx = getAudioCtx(); if (!ctx) return;
+  var t0 = ctx.currentTime;
+  // Hiss layer: white noise through high-pass filter
+  var src = ctx.createBufferSource(); src.buffer = getNoiseBuffer(ctx); src.loop = true;
+  var hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 1800; hp.Q.value = 0.7;
+  var hg = ctx.createGain();
+  hg.gain.setValueAtTime(0.0001, t0);
+  hg.gain.exponentialRampToValueAtTime(0.05, t0 + 0.08);
+  hg.gain.linearRampToValueAtTime(0.04, t0 + 1.4);
+  hg.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.0);
+  src.connect(hp); hp.connect(hg); hg.connect(ctx.destination);
+  src.start(t0); src.stop(t0 + 2.05);
+  // Bubble pops scattered in time
+  for (var i = 0; i < 22; i++) {
+    var bt = t0 + 0.05 + Math.random() * 1.7;
+    var f = 180 + Math.random() * 520;
+    _bubble(ctx, bt, f, 0.07 + Math.random() * 0.06);
+  }
+}
+
+/* Explosion: low thump + filtered noise burst with downward sweep */
+function playExplode() {
+  var ctx = getAudioCtx(); if (!ctx) return;
+  var t0 = ctx.currentTime;
+  // Noise burst through dropping low-pass = "boom"
+  var src = ctx.createBufferSource(); src.buffer = getNoiseBuffer(ctx);
+  var lp = ctx.createBiquadFilter(); lp.type = "lowpass";
+  lp.frequency.setValueAtTime(2400, t0);
+  lp.frequency.exponentialRampToValueAtTime(180, t0 + 0.7);
+  var ng = ctx.createGain();
+  ng.gain.setValueAtTime(0.5, t0);
+  ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.85);
+  src.connect(lp); lp.connect(ng); ng.connect(ctx.destination);
+  src.start(t0); src.stop(t0 + 0.9);
+  // Sub-bass thump: sine sweep
+  var o = ctx.createOscillator();
+  var og = ctx.createGain();
+  o.type = "sine";
+  o.frequency.setValueAtTime(140, t0);
+  o.frequency.exponentialRampToValueAtTime(38, t0 + 0.5);
+  og.gain.setValueAtTime(0.6, t0);
+  og.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.55);
+  o.connect(og); og.connect(ctx.destination);
+  o.start(t0); o.stop(t0 + 0.6);
+  // Crackle: high-passed noise tail
+  var src2 = ctx.createBufferSource(); src2.buffer = getNoiseBuffer(ctx);
+  var hp2 = ctx.createBiquadFilter(); hp2.type = "highpass"; hp2.frequency.value = 3500;
+  var ng2 = ctx.createGain();
+  ng2.gain.setValueAtTime(0.0001, t0);
+  ng2.gain.exponentialRampToValueAtTime(0.18, t0 + 0.02);
+  ng2.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.4);
+  src2.connect(hp2); hp2.connect(ng2); ng2.connect(ctx.destination);
+  src2.start(t0); src2.stop(t0 + 0.45);
+}
+
+/* Whoosh: rising-then-falling band-passed noise (combustion / flame burst) */
+function playWhoosh() {
+  var ctx = getAudioCtx(); if (!ctx) return;
+  var t0 = ctx.currentTime;
+  var src = ctx.createBufferSource(); src.buffer = getNoiseBuffer(ctx);
+  var bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = 1.2;
+  bp.frequency.setValueAtTime(400, t0);
+  bp.frequency.exponentialRampToValueAtTime(2200, t0 + 0.35);
+  bp.frequency.exponentialRampToValueAtTime(600, t0 + 1.0);
+  var ng = ctx.createGain();
+  ng.gain.setValueAtTime(0.0001, t0);
+  ng.gain.exponentialRampToValueAtTime(0.18, t0 + 0.15);
+  ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.1);
+  src.connect(bp); bp.connect(ng); ng.connect(ctx.destination);
+  src.start(t0); src.stop(t0 + 1.15);
+}
+
+/* Plop: low gentle splash for precipitation */
+function playPlop() {
+  var ctx = getAudioCtx(); if (!ctx) return;
+  var t0 = ctx.currentTime;
+  var o = ctx.createOscillator();
+  var g = ctx.createGain();
+  o.type = "sine";
+  o.frequency.setValueAtTime(520, t0);
+  o.frequency.exponentialRampToValueAtTime(140, t0 + 0.18);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(0.18, t0 + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.25);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(t0); o.stop(t0 + 0.28);
+  // Tiny ripple noise
+  var src = ctx.createBufferSource(); src.buffer = getNoiseBuffer(ctx);
+  var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 800;
+  var ng = ctx.createGain();
+  ng.gain.setValueAtTime(0.04, t0); ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.3);
+  src.connect(lp); lp.connect(ng); ng.connect(ctx.destination);
+  src.start(t0); src.stop(t0 + 0.32);
+}
+
+/* Tick: short percussive click for UI taps */
+function playTick() {
+  var ctx = getAudioCtx(); if (!ctx) return;
+  var t0 = ctx.currentTime;
+  var o = ctx.createOscillator();
+  var g = ctx.createGain();
+  o.type = "triangle";
+  o.frequency.setValueAtTime(900, t0);
+  o.frequency.exponentialRampToValueAtTime(500, t0 + 0.04);
+  g.gain.setValueAtTime(0.08, t0);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.06);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(t0); o.stop(t0 + 0.07);
+}
+
+/* Achievement: 3-note ascending arpeggio C-E-G */
+function playAchievement() {
+  var ctx = getAudioCtx(); if (!ctx) return;
+  var t0 = ctx.currentTime;
+  var notes = [523.25, 659.25, 783.99, 1046.50];
+  notes.forEach(function(f, i) {
+    var o = ctx.createOscillator();
+    var g = ctx.createGain();
+    o.type = "triangle";
+    o.frequency.value = f;
+    var st = t0 + i * 0.09;
+    g.gain.setValueAtTime(0.0001, st);
+    g.gain.exponentialRampToValueAtTime(0.12, st + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, st + 0.3);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(st); o.stop(st + 0.32);
+  });
+}
+
+/* Router — keeps the existing playBeep(type) interface */
+function playBeep(type) {
+  try {
+    if (type === "explode") return playExplode();
+    if (type === "whoosh" || type === "combustion") return playWhoosh();
+    if (type === "plop" || type === "precip") return playPlop();
+    if (type === "achievement") return playAchievement();
+    if (type === "fizz") return playFizz();
+    return playTick();
+  } catch (e) { /* silent */ }
+}
+
+/* ═══ HELPERS ═══ */
+function findReaction(b) {
+  if (b.length !== 2) return null;
+  var ids = [b[0].id, b[1].id];
+  return RXN.find(function(r) { return r.r.indexOf(ids[0]) !== -1 && r.r.indexOf(ids[1]) !== -1; }) || null;
+}
+
+function pHColor(pH) {
+  if (pH === null) return "#666";
+  if (pH <= 2) return "#ff1744"; if (pH <= 4) return "#ff5722"; if (pH <= 6) return "#ffab00";
+  if (pH === 7) return "#76ff03"; if (pH <= 9) return "#00e5ff"; if (pH <= 11) return "#2979ff";
+  return "#7c4dff";
+}
+
+function pHLabel(pH) {
+  if (pH === null) return "N/A";
+  if (pH <= 2) return "Strongly Acidic"; if (pH <= 6) return "Acidic";
+  if (pH === 7) return "Neutral"; if (pH <= 11) return "Basic";
+  return "Strongly Basic";
+}
+
+function sdots(s) { return s==="instant"?"####":s==="fast"?"###-":s==="medium"?"##--":"#---"; }
+function scol(s) { return s==="instant"?"#ff1744":s==="fast"?"#ff9100":s==="medium"?"#ffd600":"#76ff03"; }
+
+/* ═══ THEME ═══ */
+function themeStyles(theme) {
+  if (theme === "light") return {
+    bg: "linear-gradient(180deg,#eef2f7,#e3eaf2,#eef2f7)",
+    text: "#0a0e1a",
+    textDim: "#2d3548",
+    textMute: "#4a5468",
+    surface: "rgba(255,255,255,.92)",
+    surfaceAlt: "rgba(0,0,0,.05)",
+    border: "rgba(0,0,0,.18)",
+    borderSoft: "rgba(0,0,0,.1)",
+    headerBg: "rgba(255,255,255,.85)",
+    headerBorder: "#a8b3c4",
+    beakerBg: "rgba(255,255,255,.85)",
+    glassStroke: "rgba(0,0,0,0.45)",
+    isLight: true,
+  };
+  return {
+    bg: "linear-gradient(180deg,#060710,#0a0e18,#080c14)",
+    text: "#e0e0e0",
+    textDim: "#888",
+    textMute: "#444",
+    surface: "rgba(10,12,20,.95)",
+    surfaceAlt: "rgba(255,255,255,.02)",
+    border: "rgba(255,255,255,.08)",
+    borderSoft: "rgba(255,255,255,.04)",
+    headerBg: "rgba(0,0,0,.5)",
+    headerBorder: "#12161f",
+    beakerBg: "rgba(10,12,20,.95)",
+    glassStroke: "rgba(255,255,255,0.45)",
+    isLight: false,
+  };
+}
+
+/* ═══ MOLECULES (CPK-style mini structures) ═══ */
+var ATOM_COLORS = {
+  H:"#f5f5f5", O:"#ff5252", N:"#3f51b5", C:"#555555",
+  Na:"#ffd54f", K:"#9575cd", Cl:"#69f0ae", F:"#aeea00",
+  Mg:"#7cb342", Ca:"#558b2f", Fe:"#bf6b00", Cu:"#ef6c00",
+  Zn:"#90a4ae", Ag:"#bdbdbd", S:"#fbc02d", Mn:"#9c27b0",
+  Al:"#cfd8dc", Pb:"#607d8b", I:"#7e57c2", Br:"#8d6e63",
+};
+
+// Each molecule: atoms = [symbol, dx, dy, radius]; bonds = [[i,j], ...]
+var MOL = {
+  "H2O":   { atoms:[["O",0,-2,11],["H",-15,10,7],["H",15,10,7]], bonds:[[0,1],[0,2]] },
+  "H2":    { atoms:[["H",-10,0,8],["H",10,0,8]], bonds:[[0,1]] },
+  "O2":    { atoms:[["O",-12,0,11],["O",12,0,11]], bonds:[[0,1]] },
+  "CO2":   { atoms:[["O",-20,0,10],["C",0,0,9],["O",20,0,10]], bonds:[[0,1],[1,2]] },
+  "NH3":   { atoms:[["N",0,-6,11],["H",-16,8,7],["H",16,8,7],["H",0,16,7]], bonds:[[0,1],[0,2],[0,3]] },
+  "NaCl":  { atoms:[["Na",-13,0,12],["Cl",13,0,12]], bonds:[[0,1]] },
+  "KCl":   { atoms:[["K",-13,0,12],["Cl",13,0,12]], bonds:[[0,1]] },
+  "MgO":   { atoms:[["Mg",-13,0,12],["O",13,0,11]], bonds:[[0,1]] },
+  "CaO":   { atoms:[["Ca",-13,0,12],["O",13,0,11]], bonds:[[0,1]] },
+  "MgCl2": { atoms:[["Mg",0,0,11],["Cl",-20,2,11],["Cl",20,2,11]], bonds:[[0,1],[0,2]] },
+  "CaCl2": { atoms:[["Ca",0,0,12],["Cl",-20,2,11],["Cl",20,2,11]], bonds:[[0,1],[0,2]] },
+  "ZnCl2": { atoms:[["Zn",0,0,11],["Cl",-20,2,11],["Cl",20,2,11]], bonds:[[0,1],[0,2]] },
+  "FeCl2": { atoms:[["Fe",0,0,11],["Cl",-20,2,11],["Cl",20,2,11]], bonds:[[0,1],[0,2]] },
+  "HCl":   { atoms:[["H",-10,0,7],["Cl",10,0,11]], bonds:[[0,1]] },
+  "AgCl":  { atoms:[["Ag",-13,0,12],["Cl",13,0,12]], bonds:[[0,1]] },
+  "NaOH":  { atoms:[["Na",-16,0,12],["O",4,0,10],["H",18,9,7]], bonds:[[0,1],[1,2]] },
+  "Cu(OH)2": { atoms:[["Cu",0,0,11],["O",-16,-4,9],["O",16,-4,9],["H",-24,5,6],["H",24,5,6]], bonds:[[0,1],[0,2],[1,3],[2,4]] },
+  "NaNO3": { atoms:[["N",0,0,9],["O",-15,-7,9],["O",15,-7,9],["O",0,14,9],["Na",0,-22,11]], bonds:[[0,1],[0,2],[0,3],[0,4]] },
+  "Na2SO4":{ atoms:[["S",0,0,10],["O",-15,-8,9],["O",15,-8,9],["O",-9,14,9],["O",9,14,9]], bonds:[[0,1],[0,2],[0,3],[0,4]] },
+  "MgSO4": { atoms:[["S",0,0,10],["O",-15,-8,9],["O",15,-8,9],["O",-9,14,9],["O",9,14,9]], bonds:[[0,1],[0,2],[0,3],[0,4]] },
+  "ZnSO4": { atoms:[["S",0,0,10],["O",-15,-8,9],["O",15,-8,9],["O",-9,14,9],["O",9,14,9]], bonds:[[0,1],[0,2],[0,3],[0,4]] },
+  "FeSO4": { atoms:[["S",0,0,10],["O",-15,-8,9],["O",15,-8,9],["O",-9,14,9],["O",9,14,9]], bonds:[[0,1],[0,2],[0,3],[0,4]] },
+  "CuSO4": { atoms:[["S",0,0,10],["O",-15,-8,9],["O",15,-8,9],["O",-9,14,9],["O",9,14,9]], bonds:[[0,1],[0,2],[0,3],[0,4]] },
+  "CaCO3": { atoms:[["C",0,0,9],["O",-16,-5,10],["O",16,-5,10],["O",0,15,10],["Ca",0,-20,12]], bonds:[[0,1],[0,2],[0,3],[0,4]] },
+  "Cu":    { atoms:[["Cu",0,0,14]], bonds:[] },
+  "Ag":    { atoms:[["Ag",0,0,14]], bonds:[] },
+  "Fe":    { atoms:[["Fe",0,0,14]], bonds:[] },
+};
+
+function parseProducts(eq) {
+  var rhs = eq.split("->")[1] || "";
+  return rhs.split("+").map(function(p) {
+    return p.trim().replace(/^\d+\s*/, "").split(/\s+/)[0];
+  }).filter(function(p) { return p && p !== "fire" && p !== "heat" && p !== "light" && MOL[p]; });
+}
+
+function MoleculeView(props) {
+  var molKey = props.molKey;
+  var T = props.T || themeStyles("dark");
+  var mol = MOL[molKey];
+  if (!mol) return null;
+  var size = 88;
+  var cx = size/2, cy = size/2;
+  var bondColor = T.isLight ? "#666" : "#aaa";
+  var labelColor = T.isLight ? "#fff" : "#111";
+  return (
+    <div style={{ display:"flex",flexDirection:"column",alignItems:"center" }}>
+      <svg width={size} height={size} viewBox={"0 0 "+size+" "+size} style={{ background:"radial-gradient(circle at 50% 40%,rgba(64,196,255,.1),transparent 70%)",borderRadius:10 }}>
+        <defs>
+          {Object.keys(ATOM_COLORS).map(function(k) {
+            return <radialGradient key={k} id={"atomg_"+k} cx="35%" cy="35%">
+              <stop offset="0%" stopColor="#fff" stopOpacity="0.95"/>
+              <stop offset="45%" stopColor={ATOM_COLORS[k]} stopOpacity="1"/>
+              <stop offset="100%" stopColor={ATOM_COLORS[k]} stopOpacity="0.55"/>
+            </radialGradient>;
+          })}
+        </defs>
+        {mol.bonds.map(function(b,i) {
+          var a1 = mol.atoms[b[0]], a2 = mol.atoms[b[1]];
+          return <line key={"bb"+i} x1={cx+a1[1]} y1={cy+a1[2]} x2={cx+a2[1]} y2={cy+a2[2]} stroke={bondColor} strokeWidth="3" strokeLinecap="round" opacity="0.55"/>;
+        })}
+        {mol.atoms.map(function(a,i) {
+          return <g key={"aa"+i}>
+            <circle cx={cx+a[1]+1} cy={cy+a[2]+2} r={a[3]} fill="#000" opacity="0.25"/>
+            <circle cx={cx+a[1]} cy={cy+a[2]} r={a[3]} fill={"url(#atomg_"+a[0]+")"} stroke={ATOM_COLORS[a[0]]||"#888"} strokeWidth="0.6"/>
+            <text x={cx+a[1]} y={cy+a[2]+a[3]/3+1} textAnchor="middle" fontSize={a[3]>10?11:9} fontWeight="900" fill={labelColor} fontFamily="inherit">{a[0]}</text>
+          </g>;
+        })}
+      </svg>
+      <div style={{ fontSize:12,color:"#90caf9",fontWeight:700,marginTop:3,letterSpacing:1 }}>{molKey}</div>
+    </div>
+  );
+}
+
+/* ═══ BEAKER (SVG with liquid mixing animation) ═══ */
+function Beaker(props) {
+  var bench = props.bench;
+  var running = props.running;
+  var done = props.done;
+  var color = props.color || "#666";
+  var T = props.T || themeStyles("dark");
+  var c1 = bench[0] && bench[0].color;
+  var c2 = bench[1] && bench[1].color;
+  var fillCount = bench.length;
+
+  return (
+    <svg width="86" height="108" viewBox="0 0 86 108">
+      <defs>
+        <linearGradient id="bkLiqA" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={c1||"#333"} stopOpacity="0.55"/>
+          <stop offset="100%" stopColor={c1||"#333"} stopOpacity="0.95"/>
+        </linearGradient>
+        <linearGradient id="bkLiqB" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={c2||"#333"} stopOpacity="0.55"/>
+          <stop offset="100%" stopColor={c2||"#333"} stopOpacity="0.95"/>
+        </linearGradient>
+        <linearGradient id="bkLiqMix" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.65"/>
+          <stop offset="100%" stopColor={color} stopOpacity="1"/>
+        </linearGradient>
+        <clipPath id="bkClip">
+          <path d="M 22 30 L 22 86 Q 22 94 30 94 L 56 94 Q 64 94 64 86 L 64 30 Z"/>
+        </clipPath>
+      </defs>
+
+      {/* Glass body */}
+      <path d="M 20 22 L 20 86 Q 20 96 30 96 L 56 96 Q 66 96 66 86 L 66 22"
+        fill={T.isLight?"rgba(255,255,255,0.4)":"rgba(255,255,255,0.04)"}
+        stroke={T.glassStroke} strokeWidth="1.6" strokeLinejoin="round"/>
+      <line x1="14" y1="22" x2="72" y2="22" stroke={T.glassStroke} strokeWidth="1.6" strokeLinecap="round"/>
+      {/* Volume marks */}
+      {[40,55,70].map(function(y,i) {
+        return <line key={i} x1="20" y1={y} x2="26" y2={y} stroke={T.glassStroke} strokeWidth="0.8" opacity="0.6"/>;
+      })}
+
+      <g clipPath="url(#bkClip)">
+        {/* Single liquid */}
+        {fillCount === 1 && c1 && (
+          <rect x="20" y="65" width="46" height="35" fill="url(#bkLiqA)">
+            <animate attributeName="y" values="67;63;67" dur="2.2s" repeatCount="indefinite"/>
+          </rect>
+        )}
+        {/* Two unmixed liquids side by side */}
+        {fillCount === 2 && !running && !done && (
+          <g>
+            <rect x="20" y="62" width="23" height="35" fill="url(#bkLiqA)"/>
+            <rect x="43" y="62" width="23" height="35" fill="url(#bkLiqB)"/>
+            <line x1="43" y1="62" x2="43" y2="96" stroke="rgba(255,255,255,0.25)" strokeWidth="0.5"/>
+          </g>
+        )}
+        {/* Mixing/done */}
+        {(running || done) && fillCount === 2 && (
+          <g>
+            <rect x="20" y="55" width="46" height="42" fill="url(#bkLiqMix)">
+              {running && <animate attributeName="opacity" values="0.55;1;0.7;1" dur="0.55s" repeatCount="indefinite"/>}
+            </rect>
+            {/* Wave top */}
+            <path d="M 20 56 Q 30 52 43 56 T 66 56 L 66 60 L 20 60 Z" fill={color} opacity="0.8">
+              {running && <animate attributeName="d" values="M 20 56 Q 30 52 43 56 T 66 56 L 66 60 L 20 60 Z;M 20 58 Q 30 54 43 58 T 66 58 L 66 60 L 20 60 Z;M 20 56 Q 30 52 43 56 T 66 56 L 66 60 L 20 60 Z" dur="0.7s" repeatCount="indefinite"/>}
+            </path>
+            {running && <g>
+              <circle cx="32" cy="80" r="3" fill="rgba(255,255,255,0.7)">
+                <animate attributeName="cy" values="92;55" dur="1.2s" repeatCount="indefinite"/>
+                <animate attributeName="opacity" values="0;1;0" dur="1.2s" repeatCount="indefinite"/>
+              </circle>
+              <circle cx="46" cy="78" r="2.5" fill="rgba(255,255,255,0.7)">
+                <animate attributeName="cy" values="92;55" dur="1.4s" repeatCount="indefinite" begin="0.3s"/>
+                <animate attributeName="opacity" values="0;1;0" dur="1.4s" repeatCount="indefinite" begin="0.3s"/>
+              </circle>
+              <circle cx="55" cy="82" r="2" fill="rgba(255,255,255,0.5)">
+                <animate attributeName="cy" values="92;55" dur="1s" repeatCount="indefinite" begin="0.6s"/>
+                <animate attributeName="opacity" values="0;1;0" dur="1s" repeatCount="indefinite" begin="0.6s"/>
+              </circle>
+              <circle cx="38" cy="85" r="1.8" fill="rgba(255,255,255,0.6)">
+                <animate attributeName="cy" values="92;55" dur="1.3s" repeatCount="indefinite" begin="0.15s"/>
+                <animate attributeName="opacity" values="0;1;0" dur="1.3s" repeatCount="indefinite" begin="0.15s"/>
+              </circle>
+            </g>}
+          </g>
+        )}
+      </g>
+
+      {/* Reflection highlight */}
+      <line x1="26" y1="34" x2="26" y2="80" stroke="rgba(255,255,255,0.3)" strokeWidth="2.5" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+/* ═══ THERMOMETER ═══ */
+function Thermometer(props) {
+  var temp = props.temp; // "exo" | "endo" | "neutral" | null
+  var active = props.active;
+  var T = props.T || themeStyles("dark");
+
+  var level, color, label;
+  if (!active || !temp) { level = 0.4; color = T.isLight ? "#999" : "#666"; label = "--"; }
+  else if (temp === "exo") { level = 0.9; color = "#ff5722"; label = "HOT"; }
+  else if (temp === "endo") { level = 0.12; color = "#00bcd4"; label = "COLD"; }
+  else { level = 0.5; color = "#9e9e9e"; label = "OK"; }
+
+  var fillTop = 84 - level * 60;
+
+  return (
+    <svg width="30" height="108" viewBox="0 0 30 108">
+      <defs>
+        <linearGradient id="thGlass" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor={T.isLight?"rgba(0,0,0,0.05)":"rgba(255,255,255,0.06)"}/>
+          <stop offset="50%" stopColor={T.isLight?"rgba(0,0,0,0.12)":"rgba(255,255,255,0.22)"}/>
+          <stop offset="100%" stopColor={T.isLight?"rgba(0,0,0,0.05)":"rgba(255,255,255,0.06)"}/>
+        </linearGradient>
+        <linearGradient id={"thFill_"+(temp||"none")} x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0%" stopColor={color} stopOpacity="1"/>
+          <stop offset="100%" stopColor={color} stopOpacity="0.55"/>
+        </linearGradient>
+      </defs>
+
+      {/* Bulb */}
+      <circle cx="15" cy="90" r="9" fill={T.isLight?"rgba(0,0,0,0.05)":"rgba(255,255,255,0.06)"} stroke={T.glassStroke} strokeWidth="1.3"/>
+      <circle cx="15" cy="90" r="7" fill={color}>
+        {active && <animate attributeName="r" values="7;7.8;7" dur="1.1s" repeatCount="indefinite"/>}
+      </circle>
+
+      {/* Tube */}
+      <rect x="11.5" y="20" width="7" height="68" rx="3.5" fill="url(#thGlass)" stroke={T.glassStroke} strokeWidth="1.3"/>
+
+      {/* Mercury fill */}
+      <rect x="13" y={fillTop} width="4" height={88-fillTop} fill={"url(#thFill_"+(temp||"none")+")"} style={{ transition:"y 1.4s ease-out, height 1.4s ease-out" }}/>
+
+      {/* Tick marks */}
+      {[28,40,52,64,76].map(function(y,i) {
+        return <line key={i} x1="19" y1={y} x2="23" y2={y} stroke={T.glassStroke} strokeWidth="0.9" opacity="0.7"/>;
+      })}
+
+      {/* Label */}
+      <text x="15" y="14" textAnchor="middle" fontSize="9" fontWeight="900" fill={color} fontFamily="inherit">{label}</text>
+    </svg>
+  );
+}
+
+/* ═══ PARTICLES ═══ */
+function useParticles() {
+  var ref = useRef([]);
+  var idRef = useRef(0);
+  var rafRef = useRef(null);
+  var [tick, setTick] = useState(0);
+
+  var emit = useCallback(function(color, type, count) {
+    for (var i = 0; i < (count||15); i++) {
+      ref.current.push({
+        id: idRef.current++, x: 45+Math.random()*10, y: 40+Math.random()*20,
+        vx: (Math.random()-0.5)*(type==="explode"?10:3),
+        vy: type==="explode"?-(Math.random()*10+2):-(Math.random()*4+1),
+        sz: Math.random()*6+2, color: color, life: 1
+      });
+    }
+    setTick(function(t){return t+1});
+  }, []);
+
+  useEffect(function() {
+    if (!ref.current.length) return;
+    var timer = setInterval(function() {
+      ref.current = ref.current.map(function(p) {
+        return { ...p, x:p.x+p.vx*0.25, y:p.y+p.vy*0.25+0.15, vy:p.vy+0.1, life:p.life-0.02, sz:p.sz*0.98 };
+      }).filter(function(p) { return p.life > 0; });
+      setTick(function(t){return t+1});
+    }, 30);
+    return function() { clearInterval(timer); };
+  }, [tick > 0 ? 1 : 0]);
+
+  return { particles: ref.current, emit: emit };
+}
+
+/* ═══ TRENDS GRAPH ═══ */
+function TrendsGraph(props) {
+  var prop = COLOR_PROPS[props.prop];
+  var T = props.T;
+  if (!prop || !prop.get) return null;
+  var W = 340, H = 200;
+  var pad = { l:36, r:10, t:14, b:24 };
+  var iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
+
+  var points = EL.map(function(e) { return { n:e.n, v:prop.get(e), cat:e.cat, s:e.s }; })
+                 .filter(function(p) { return p.v != null && !isNaN(p.v); });
+  if (!points.length) return <div style={{ color:T.textDim, fontSize:13, padding:20 }}>No data</div>;
+
+  var vMin = Math.min.apply(null, points.map(function(p){return p.v}));
+  var vMax = Math.max.apply(null, points.map(function(p){return p.v}));
+  if (vMin === vMax) vMax = vMin + 1;
+  var nMax = 118;
+
+  function px(n) { return pad.l + (n / nMax) * iw; }
+  function py(v) { return pad.t + ih - ((v - vMin) / (vMax - vMin)) * ih; }
+
+  var yTicks = [vMin, (vMin+vMax)/2, vMax];
+  var fmt = function(v) {
+    var a = Math.abs(v);
+    if (a >= 1000) return Math.round(v);
+    if (a >= 10) return Math.round(v*10)/10;
+    return Math.round(v*100)/100;
+  };
+
+  // Period boundaries
+  var periodStarts = [3,11,19,37,55,87];
+  var lineColor = T.isLight ? "#1976d2" : "#40c4ff";
+
+  return (
+    <svg width="100%" height={H} viewBox={"0 0 "+W+" "+H} preserveAspectRatio="xMidYMid meet">
+      {/* Period bands */}
+      {periodStarts.map(function(s, i) {
+        return <line key={"ps"+i} x1={px(s)} y1={pad.t} x2={px(s)} y2={pad.t+ih} stroke={T.headerBorder} strokeWidth="0.5" strokeDasharray="2,3"/>;
+      })}
+      {/* Y grid + ticks */}
+      {yTicks.map(function(v, i) {
+        var y = py(v);
+        return <g key={"yt"+i}>
+          <line x1={pad.l} y1={y} x2={W-pad.r} y2={y} stroke={T.headerBorder} strokeWidth="0.5"/>
+          <text x={pad.l-5} y={y+3} fontSize="9" fill={T.textDim} textAnchor="end" fontFamily="inherit">{fmt(v)}</text>
+        </g>;
+      })}
+      {/* X ticks */}
+      {[1,18,36,54,86,118].map(function(n, i) {
+        var x = px(n);
+        return <g key={"xt"+i}>
+          <line x1={x} y1={pad.t+ih} x2={x} y2={pad.t+ih+3} stroke={T.headerBorder} strokeWidth="0.6"/>
+          <text x={x} y={pad.t+ih+12} fontSize="9" fill={T.textDim} textAnchor="middle" fontFamily="inherit">{n}</text>
+        </g>;
+      })}
+      {/* Connecting line */}
+      <polyline points={points.map(function(p){return px(p.n)+","+py(p.v)}).join(" ")} fill="none" stroke={lineColor} strokeWidth="1" opacity="0.45"/>
+      {/* Dots colored by category */}
+      {points.map(function(p, i) {
+        return <circle key={"d"+i} cx={px(p.n)} cy={py(p.v)} r="2.4" fill={CC[p.cat]||"#666"} stroke={T.isLight?"#fff":"#0a0e18"} strokeWidth="0.4"/>;
+      })}
+      {/* Axis labels */}
+      <text x={W/2} y={H-2} fontSize="9" fill={T.textDim} textAnchor="middle" fontFamily="inherit">Atomic Number →</text>
+      <text x={6} y={pad.t+ih/2} fontSize="9" fill={T.textDim} textAnchor="middle" fontFamily="inherit" transform={"rotate(-90 6 "+(pad.t+ih/2)+")"}>{prop.label}</text>
+    </svg>
+  );
+}
+
+/* ═══ COMPARE VIEW ═══ */
+function CompareView(props) {
+  var a = props.elements[0];
+  var b = props.elements[1];
+  var T = props.T;
+
+  function row(label, av, bv, unit) {
+    var aNum = (av==null||av==="?"||av==="Ancient")?null:parseFloat(av);
+    var bNum = (bv==null||bv==="?"||bv==="Ancient")?null:parseFloat(bv);
+    var aBig = aNum!=null && bNum!=null && aNum > bNum;
+    var bBig = aNum!=null && bNum!=null && bNum > aNum;
+    var aDisp = (av==null||av==="?")?"--":(av+(unit||""));
+    var bDisp = (bv==null||bv==="?")?"--":(bv+(unit||""));
+    return <div style={{ display:"grid",gridTemplateColumns:"1fr 96px 1fr",gap:5,marginBottom:5,alignItems:"center" }}>
+      <div style={{ fontSize:12,fontWeight:700,color:aBig?"#00e676":(bBig?T.textDim:T.text),textAlign:"right" }}>{aDisp}</div>
+      <div style={{ fontSize:10,color:T.textDim,textAlign:"center",fontWeight:700,letterSpacing:0.5 }}>{label}</div>
+      <div style={{ fontSize:12,fontWeight:700,color:bBig?"#00e676":(aBig?T.textDim:T.text) }}>{bDisp}</div>
+    </div>;
+  }
+
+  return (
+    <div>
+      <div style={{ display:"flex",alignItems:"center",marginBottom:14 }}>
+        <div style={{ flex:1,textAlign:"center",paddingRight:6 }}>
+          <div style={{ fontSize:12,color:T.textDim }}>#{a.n}</div>
+          <div style={{ fontSize:34,fontWeight:900,color:CC[a.cat],lineHeight:1 }}>{a.s}</div>
+          <div style={{ fontSize:14,color:T.text,marginTop:2 }}>{a.name}</div>
+          <div style={{ fontSize:10,padding:"2px 6px",borderRadius:4,display:"inline-block",marginTop:4,background:(CC[a.cat]||"#666")+"22",color:CC[a.cat],border:"1px solid "+(CC[a.cat]||"#666")+"44" }}>{a.cat}</div>
+        </div>
+        <div style={{ fontSize:17,color:T.textDim,fontWeight:700,padding:"0 4px" }}>VS</div>
+        <div style={{ flex:1,textAlign:"center",paddingLeft:6 }}>
+          <div style={{ fontSize:12,color:T.textDim }}>#{b.n}</div>
+          <div style={{ fontSize:34,fontWeight:900,color:CC[b.cat],lineHeight:1 }}>{b.s}</div>
+          <div style={{ fontSize:14,color:T.text,marginTop:2 }}>{b.name}</div>
+          <div style={{ fontSize:10,padding:"2px 6px",borderRadius:4,display:"inline-block",marginTop:4,background:(CC[b.cat]||"#666")+"22",color:CC[b.cat],border:"1px solid "+(CC[b.cat]||"#666")+"44" }}>{b.cat}</div>
+        </div>
+      </div>
+      <div style={{ background:T.surfaceAlt,borderRadius:7,padding:8 }}>
+        {row("Atomic Mass", a.m, b.m, " u")}
+        {row("Group / Period", a.col+"/"+a.row, b.col+"/"+b.row, "")}
+        {row("Electronegativity", a.en, b.en, "")}
+        {row("Atomic Radius", a.ar, b.ar, " pm")}
+        {row("Ionization E.", a.ie, b.ie, " kJ/mol")}
+        {row("Melting Pt", a.mp!=null&&a.mp!==-1?a.mp:null, b.mp!=null&&b.mp!==-1?b.mp:null, "°C")}
+        {row("Boiling Pt", a.bp!=null&&a.bp!==-1?a.bp:null, b.bp!=null&&b.bp!==-1?b.bp:null, "°C")}
+        {row("Density", a.d, b.d, " g/cm³")}
+        {row("Discovered", a.disc===-1?"Ancient":String(a.disc), b.disc===-1?"Ancient":String(b.disc), "")}
+      </div>
+    </div>
+  );
+}
+
+/* ═══ PERIODIC TABLE COMPONENT ═══ */
+function PTView(props) {
+  var T = props.T || themeStyles("dark");
+  var [sel, setSel] = useState(null);
+  var [search, setSearch] = useState("");
+  var [catF, setCatF] = useState(null);
+  var [colorMode, setColorMode] = useState("category");
+  var [compareMode, setCompareMode] = useState(false);
+  var [compare, setCompare] = useState([]);
+  var [showCompare, setShowCompare] = useState(false);
+  var [showTrends, setShowTrends] = useState(false);
+  var [trendProp, setTrendProp] = useState("en");
+
+  // Back handler refs (top of stack — closes modals first)
+  var selRef = useRef(sel);
+  var showCompareRef = useRef(showCompare);
+  var showTrendsRef = useRef(showTrends);
+  var compareModeRef = useRef(compareMode);
+  var compareLenRef = useRef(compare.length);
+  var catFRef = useRef(catF);
+  var searchRef = useRef(search);
+  useEffect(function() { selRef.current = sel; }, [sel]);
+  useEffect(function() { showCompareRef.current = showCompare; }, [showCompare]);
+  useEffect(function() { showTrendsRef.current = showTrends; }, [showTrends]);
+  useEffect(function() { compareModeRef.current = compareMode; }, [compareMode]);
+  useEffect(function() { compareLenRef.current = compare.length; }, [compare.length]);
+  useEffect(function() { catFRef.current = catF; }, [catF]);
+  useEffect(function() { searchRef.current = search; }, [search]);
+
+  useEffect(function() {
+    return window.pushBackHandler(function() {
+      if (showTrendsRef.current) { setShowTrends(false); return true; }
+      if (showCompareRef.current) { setShowCompare(false); return true; }
+      if (selRef.current) { setSel(null); return true; }
+      if (compareModeRef.current && compareLenRef.current > 0) { setCompare([]); return true; }
+      if (compareModeRef.current) { setCompareMode(false); return true; }
+      if (catFRef.current) { setCatF(null); return true; }
+      if (searchRef.current) { setSearch(""); return true; }
+      return false;
+    });
+  }, []);
+
+  var highlighted = null;
+  if (search) {
+    var s = search.toLowerCase();
+    highlighted = {};
+    EL.forEach(function(e) { if (e.name.toLowerCase().indexOf(s)!==-1 || e.s.toLowerCase().indexOf(s)!==-1 || String(e.n)===search) highlighted[e.n]=true; });
+  } else if (catF) {
+    highlighted = {};
+    EL.forEach(function(e) { if (e.cat === catF) highlighted[e.n] = true; });
+  }
+
+  function getColor(el) {
+    if (colorMode === "category") return CC[el.cat] || "#666";
+    var prop = COLOR_PROPS[colorMode];
+    if (!prop || !prop.get) return CC[el.cat] || "#666";
+    return heatColor(prop.get(el), prop.min, prop.max);
+  }
+
+  function handleClick(el) {
+    if (compareMode) {
+      setCompare(function(prev) {
+        if (prev.find(function(p){return p.n===el.n})) return prev.filter(function(p){return p.n!==el.n});
+        if (prev.length >= 2) return [prev[1], el];
+        var next = prev.concat(el);
+        if (next.length === 2) setTimeout(function(){setShowCompare(true)}, 150);
+        return next;
+      });
+    } else {
+      setSel(el);
+    }
+  }
+
+  var compareIds = {};
+  compare.forEach(function(e){compareIds[e.n]=true});
+
+  var cells = [];
+  for (var row = 1; row <= 10; row++) {
+    for (var col = 1; col <= 18; col++) {
+      if (row === 6 && col === 3) {
+        cells.push({ key: row+"-"+col, marker: "La-Lu", cat: "Lanthanide" });
+      } else if (row === 7 && col === 3) {
+        cells.push({ key: row+"-"+col, marker: "Ac-Lr", cat: "Actinide" });
+      } else {
+        var el = null;
+        for (var i = 0; i < EL.length; i++) { if (EL[i].row === row && EL[i].col === col) { el = EL[i]; break; } }
+        cells.push({ key: row+"-"+col, el: el });
+      }
+    }
+  }
+
+  var activeProp = COLOR_PROPS[colorMode];
+
+  return (
+    <div style={{ padding: "10px 8px", paddingBottom: 30 }}>
+      <input value={search} onChange={function(e){setSearch(e.target.value)}} placeholder="Search element..." style={{ width:"100%",padding:"7px 10px",borderRadius:8,border:"1px solid "+T.headerBorder,background:T.surfaceAlt,color:T.text,fontSize:14,fontFamily:"inherit",outline:"none",marginBottom:6 }} />
+
+      {/* Mode toolbar: compare + trends */}
+      <div style={{ display:"flex",gap:4,marginBottom:6 }}>
+        <button onClick={function(){setCompareMode(!compareMode);if(compareMode)setCompare([])}} style={{ flex:1,padding:"5px 6px",borderRadius:6,fontSize:11,fontWeight:700,fontFamily:"inherit",cursor:"pointer",background:compareMode?"rgba(0,230,118,.12)":T.surfaceAlt,border:"1px solid "+(compareMode?"rgba(0,230,118,.4)":T.headerBorder),color:compareMode?"#00e676":T.textDim }}>{compareMode?"⚖ COMPARE ON ("+compare.length+"/2)":"⚖ Compare"}</button>
+        <button onClick={function(){setShowTrends(true)}} style={{ flex:1,padding:"5px 6px",borderRadius:6,fontSize:11,fontWeight:700,fontFamily:"inherit",cursor:"pointer",background:T.surfaceAlt,border:"1px solid "+T.headerBorder,color:"#40c4ff" }}>📈 Trends</button>
+        {compareMode && compare.length>0 && <button onClick={function(){setCompare([])}} style={{ padding:"5px 8px",borderRadius:6,fontSize:11,fontWeight:700,fontFamily:"inherit",cursor:"pointer",background:"rgba(255,80,80,.08)",border:"1px solid rgba(255,80,80,.25)",color:"#ef5350" }}>Clear</button>}
+      </div>
+
+      {/* Color-by-property picker */}
+      <div style={{ display:"flex",alignItems:"center",gap:4,marginBottom:6,flexWrap:"wrap" }}>
+        <span style={{ fontSize:13,color:T.textDim,fontWeight:800,letterSpacing:0.5 }}>COLOR:</span>
+        {Object.keys(COLOR_PROPS).map(function(k) {
+          var on = colorMode === k;
+          return <button key={k} onClick={function(){setColorMode(k)}} style={{ padding:"6px 11px",borderRadius:12,fontSize:13,fontWeight:700,fontFamily:"inherit",cursor:"pointer",background:on?"rgba(64,196,255,.15)":T.surfaceAlt,border:"1px solid "+(on?"rgba(64,196,255,.4)":T.headerBorder),color:on?"#40c4ff":T.textDim,whiteSpace:"nowrap" }}>{COLOR_PROPS[k].label}</button>;
+        })}
+      </div>
+
+      {/* Heat scale legend (shown when not in category mode) */}
+      {colorMode !== "category" && activeProp && (
+        <div style={{ marginBottom:6,padding:"5px 7px",background:T.surfaceAlt,borderRadius:6,border:"1px solid "+T.headerBorder }}>
+          <div style={{ display:"flex",justifyContent:"space-between",fontSize:10,color:T.textDim,fontWeight:700,marginBottom:3 }}>
+            <span>{activeProp.min}{activeProp.unit}</span>
+            <span style={{ color:T.text }}>{activeProp.label}</span>
+            <span>{activeProp.max}{activeProp.unit}</span>
+          </div>
+          <div style={{ height:6,borderRadius:3,background:"linear-gradient(90deg,hsl(240,75%,50%),hsl(180,75%,50%),hsl(120,75%,50%),hsl(60,75%,50%),hsl(0,75%,50%))" }}/>
+        </div>
+      )}
+
+      {/* Category filter pills */}
+      <div style={{ display:"flex",flexWrap:"wrap",gap:5,marginBottom:8 }}>
+        {Object.keys(CC).map(function(c) {
+          return <button key={c} onClick={function(){setCatF(catF===c?null:c)}} style={{ padding:"6px 12px",borderRadius:14,fontSize:13,fontWeight:700,fontFamily:"inherit",cursor:"pointer",background:catF===c?CC[c]+"33":T.surfaceAlt,border:"1px solid "+(catF===c?CC[c]+"66":T.borderSoft),color:catF===c?CC[c]:T.textDim }}>{c}</button>;
+        })}
+      </div>
+
+      {/* The grid */}
+      <div style={{ overflowX:"auto",paddingBottom:6 }}>
+        <div style={{ display:"grid",gridTemplateColumns:"repeat(18,1fr)",gap:1.5,minWidth:540 }}>
+          {cells.map(function(cell) {
+            if (cell.marker) {
+              var mc = CC[cell.cat];
+              return <button key={cell.key} onClick={function(){setCatF(catF===cell.cat?null:cell.cat)}} style={{ aspectRatio:"1",minWidth:0,borderRadius:3,display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,fontFamily:"inherit",cursor:"pointer",background:mc+"22",border:"1px solid "+mc+"33",color:mc,padding:0 }}>{cell.marker}</button>;
+            }
+            if (!cell.el) return <div key={cell.key} style={{ aspectRatio:"1" }} />;
+            var e = cell.el;
+            var dim = highlighted && !highlighted[e.n];
+            var c = getColor(e);
+            var picked = compareIds[e.n];
+            // Heat-mode cells: solid bg with white text for contrast
+            var heatMode = colorMode !== "category";
+            var bg, brd, txt;
+            if (dim) { bg = T.surfaceAlt; brd = T.borderSoft; txt = T.textMute; }
+            else if (heatMode) { bg = c; brd = c; txt = "#fff"; }
+            else { bg = c+"18"; brd = c+"44"; txt = c; }
+            if (picked) { brd = "#00e676"; }
+            return <button key={cell.key} onClick={function(){handleClick(e)}} style={{ aspectRatio:"1",minWidth:0,borderRadius:3,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:"inherit",padding:0,cursor:"pointer",background:bg,border:(picked?"2px solid #00e676":"1px solid "+brd),opacity:dim?0.18:1,color:txt,boxShadow:picked?"0 0 6px rgba(0,230,118,.6)":"none" }}>
+              <span style={{ fontSize:8,opacity:0.7 }}>{e.n}</span>
+              <span style={{ fontSize:12,fontWeight:800 }}>{e.s}</span>
+            </button>;
+          })}
+        </div>
+      </div>
+
+      {/* Element detail modal */}
+      {sel && (
+        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:20 }} onClick={function(){setSel(null)}}>
+          <div onClick={function(e){e.stopPropagation()}} style={{ background:T.isLight?"#fff":"#0d1117",border:"2px solid "+(CC[sel.cat]||"#444"),borderRadius:16,padding:20,maxWidth:340,width:"100%",maxHeight:"80vh",overflowY:"auto" }}>
+            <div style={{ display:"flex",justifyContent:"space-between",marginBottom:12 }}>
+              <div>
+                <span style={{ fontSize:14,color:T.textDim }}>#{sel.n}</span>
+                <h2 style={{ fontSize:26,fontWeight:900,margin:"2px 0",color:CC[sel.cat] }}>{sel.s}</h2>
+                <h3 style={{ fontSize:16,fontWeight:600,margin:0,color:T.text }}>{sel.name}</h3>
+                <div style={{ fontSize:11,padding:"2px 7px",borderRadius:4,display:"inline-block",marginTop:4,background:(CC[sel.cat]||"#666")+"22",color:CC[sel.cat],border:"1px solid "+(CC[sel.cat]||"#666")+"44" }}>{sel.cat}</div>
+              </div>
+              <button onClick={function(){setSel(null)}} style={{ background:T.surfaceAlt,border:"none",borderRadius:8,width:28,height:28,color:T.textDim,fontSize:17,cursor:"pointer" }}>X</button>
+            </div>
+            <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:10 }}>
+              {[["Mass",sel.m+" u"],["MP",sel.mp!=null&&sel.mp!==-1?sel.mp+"°C":"?"],["BP",sel.bp!=null&&sel.bp!==-1?sel.bp+"°C":"?"],["Density",sel.d+" g/cm³"],["Electroneg.",sel.en!=null?sel.en:"?"],["At. Radius",sel.ar!=null?sel.ar+" pm":"?"],["Ionization E.",sel.ie!=null?sel.ie+" kJ/mol":"?"],["Disc.",sel.disc===-1?"Ancient":String(sel.disc)],["Config",sel.config]].map(function(pair,i) {
+                return <div key={i} style={{ background:T.surfaceAlt,borderRadius:5,padding:"5px 7px" }}>
+                  <div style={{ fontSize:9,color:T.textDim,fontWeight:700 }}>{pair[0]}</div>
+                  <div style={{ fontSize:13,color:T.text,fontWeight:600 }}>{pair[1]}</div>
+                </div>;
+              })}
+            </div>
+            <div style={{ background:"rgba(255,215,0,.06)",border:"1px solid rgba(255,215,0,.18)",borderRadius:7,padding:8 }}>
+              <div style={{ fontSize:10,color:"#ffd700",fontWeight:700,marginBottom:2 }}>FUN FACT</div>
+              <p style={{ fontSize:13,color:T.text,lineHeight:1.5,margin:0 }}>{sel.fact}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Compare modal */}
+      {showCompare && compare.length === 2 && (
+        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.88)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:20 }} onClick={function(){setShowCompare(false)}}>
+          <div onClick={function(e){e.stopPropagation()}} style={{ background:T.isLight?"#fff":"#0d1117",border:"2px solid #00e676",borderRadius:16,padding:18,maxWidth:380,width:"100%",maxHeight:"85vh",overflowY:"auto" }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8 }}>
+              <div style={{ fontSize:13,fontWeight:800,color:"#00e676",letterSpacing:1 }}>⚖ COMPARE</div>
+              <button onClick={function(){setShowCompare(false)}} style={{ background:T.surfaceAlt,border:"none",borderRadius:8,width:28,height:28,color:T.textDim,fontSize:17,cursor:"pointer" }}>X</button>
+            </div>
+            <CompareView elements={compare} T={T}/>
+            <div style={{ fontSize:10,color:T.textDim,marginTop:8,textAlign:"center",fontStyle:"italic" }}>Green highlights the larger value</div>
+          </div>
+        </div>
+      )}
+
+      {/* Trends modal */}
+      {showTrends && (
+        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.88)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:14 }} onClick={function(){setShowTrends(false)}}>
+          <div onClick={function(e){e.stopPropagation()}} style={{ background:T.isLight?"#fff":"#0d1117",border:"2px solid #40c4ff",borderRadius:16,padding:14,maxWidth:400,width:"100%",maxHeight:"90vh",overflowY:"auto" }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8 }}>
+              <div style={{ fontSize:13,fontWeight:800,color:"#40c4ff",letterSpacing:1 }}>📈 PERIODIC TRENDS</div>
+              <button onClick={function(){setShowTrends(false)}} style={{ background:T.surfaceAlt,border:"none",borderRadius:8,width:28,height:28,color:T.textDim,fontSize:17,cursor:"pointer" }}>X</button>
+            </div>
+            <div style={{ display:"flex",gap:3,flexWrap:"wrap",marginBottom:8 }}>
+              {Object.keys(COLOR_PROPS).filter(function(k){return k!=="category"}).map(function(k) {
+                var on = trendProp === k;
+                return <button key={k} onClick={function(){setTrendProp(k)}} style={{ padding:"4px 7px",borderRadius:5,fontSize:10,fontWeight:700,fontFamily:"inherit",cursor:"pointer",background:on?"rgba(64,196,255,.15)":T.surfaceAlt,border:"1px solid "+(on?"rgba(64,196,255,.4)":T.headerBorder),color:on?"#40c4ff":T.textDim }}>{COLOR_PROPS[k].label}</button>;
+              })}
+            </div>
+            <div style={{ background:T.surfaceAlt,borderRadius:8,padding:6,border:"1px solid "+T.headerBorder }}>
+              <TrendsGraph prop={trendProp} T={T}/>
+            </div>
+            <div style={{ fontSize:11,color:T.textDim,marginTop:8,lineHeight:1.5 }}>
+              <strong style={{ color:T.text }}>How to read:</strong> Each dot = one element (colored by category). Vertical dashed lines mark new periods (rows). Notice how properties oscillate periodically — that's the basis of the periodic law.
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══ MAIN ═══ */
+function LabCraft(props) {
+  var theme = props.theme || "dark";
+  var setTheme = props.setTheme || function(){};
+  var T = themeStyles(theme);
+  var [bench, setBench] = useState([]);
+  var [result, setResult] = useState(null);
+  var [running, setRunning] = useState(false);
+  var [done, setDone] = useState(false);
+  var [filter, setFilter] = useState("All");
+  var [heat, setHeat] = useState(false);
+  var [log, setLog] = useState([]);
+  var [tab, setTab] = useState("lab");
+  var [cDone, setCDone] = useState([]);
+  var [newAch, setNewAch] = useState(null);
+  var [soundOn, setSoundOn] = useState(true);
+  var [timedActive, setTimedActive] = useState(false);
+  var [timedTime, setTimedTime] = useState(60);
+  var [timedFound, setTimedFound] = useState([]);
+  var [timedBest, setTimedBest] = useState(null);
+  var prevAchCount = useRef(0);
+
+  var { particles, emit } = useParticles();
+  var reaction = findReaction(bench);
+  var filtered = filter === "All" ? ITEMS : ITEMS.filter(function(i){return i.tag===filter});
+
+  // Refs for back handler (so it always sees latest state)
+  var tabRef = useRef(tab);
+  var benchRef = useRef(bench);
+  var resultRef = useRef(result);
+  useEffect(function() { tabRef.current = tab; }, [tab]);
+  useEffect(function() { benchRef.current = bench; }, [bench]);
+  useEffect(function() { resultRef.current = result; }, [result]);
+
+  // Back handler: tab→lab, then result/bench→clear
+  useEffect(function() {
+    return window.pushBackHandler(function() {
+      if (tabRef.current !== "lab") { setTab("lab"); return true; }
+      if (resultRef.current) { clearAll(); return true; }
+      if (benchRef.current.length > 0) { clearAll(); return true; }
+      return false; // bubble down to App handler (lab → menu)
+    });
+  }, []);
+
+  var totalScore = log.reduce(function(sum, key) {
+    var r = RXN.find(function(x){return x.r.slice().sort().join("+")===key});
+    return sum + (r ? r.score : 0);
+  }, 0);
+
+  var earnedAch = ACHIEVEMENTS.filter(function(a){return a.check(log)});
+
+  useEffect(function() {
+    if (earnedAch.length > prevAchCount.current && prevAchCount.current > 0) {
+      var newest = earnedAch[earnedAch.length - 1];
+      setNewAch(newest);
+      if (soundOn) playBeep("achievement");
+      setTimeout(function(){setNewAch(null)}, 3000);
+    }
+    prevAchCount.current = earnedAch.length;
+  });
+
+  useEffect(function() {
+    if (!timedActive) return;
+    if (timedTime <= 0) {
+      setTimedActive(false);
+      if (!timedBest || timedFound.length > timedBest) setTimedBest(timedFound.length);
+      return;
+    }
+    var t = setTimeout(function(){setTimedTime(function(v){return v-1})}, 1000);
+    return function(){clearTimeout(t)};
+  }, [timedActive, timedTime]);
+
+  var hints = bench.length === 1 ? RXN.filter(function(r){return r.r.indexOf(bench[0].id)!==-1}).map(function(r){return r.r[0]===bench[0].id?r.r[1]:r.r[0]}) : [];
+
+  function addItem(item) {
+    if (bench.length >= 2 || bench.find(function(b){return b.id===item.id})) return;
+    setBench(function(p){return p.concat(item)});
+    setResult(null); setDone(false);
+    if (soundOn) playBeep("tick");
+  }
+
+  function removeItem(id) {
+    setBench(function(p){return p.filter(function(b){return b.id!==id})});
+    setResult(null); setDone(false);
+  }
+
+  function clearAll() { setBench([]); setResult(null); setDone(false); setRunning(false); }
+
+  function runExperiment() {
+    if (!reaction || running) return;
+    var rxn = reaction;
+    setRunning(true); setResult(null); setDone(false);
+    var boom = rxn.anim === "explode";
+    if (soundOn) {
+      // Pick the best sound for the reaction type
+      var snd = "fizz";
+      if (boom && rxn.type === "combustion") snd = "whoosh";
+      else if (boom) snd = "explode";
+      else if (rxn.type === "precipitation") snd = "plop";
+      else if (rxn.type === "combustion") snd = "whoosh";
+      playBeep(snd);
+      // Layer a soft fizz behind explosions for richer texture
+      if (boom) setTimeout(function(){ playBeep("fizz"); }, 120);
+    }
+    emit(rxn.color, rxn.anim, boom ? 30 : 15);
+    if (boom) {
+      setTimeout(function(){emit("#ff6600","explode",10)}, 350);
+      setTimeout(function(){emit("#ffcc00","explode",8)}, 650);
+    }
+    setTimeout(function() {
+      setRunning(false); setDone(true); setResult(rxn);
+      var key = rxn.r.slice().sort().join("+");
+      setLog(function(prev){return prev.indexOf(key)!==-1?prev:prev.concat(key)});
+      var mc = CHALLENGES.filter(function(ch){return ch.target===key}).map(function(ch){return ch.id});
+      if (mc.length) setCDone(function(prev){var n=prev.slice();mc.forEach(function(id){if(n.indexOf(id)===-1)n.push(id)});return n});
+      if (timedActive) setTimedFound(function(prev){return prev.indexOf(key)!==-1?prev:prev.concat(key)});
+    }, 2200);
+  }
+
+  function startTimed() { setTimedActive(true); setTimedTime(60); setTimedFound([]); clearAll(); }
+
+  var rxnCount = function(id){return RXN.filter(function(r){return r.r.indexOf(id)!==-1}).length};
+
+  var B = function(p) {
+    return {padding:p||"3px 8px",borderRadius:5,fontSize:12,fontFamily:"inherit",cursor:"pointer",border:"1px solid rgba(255,255,255,.08)"};
+  };
+
+  return (
+    <div style={{ minHeight:"100vh",background:T.bg,fontFamily:"'SF Mono','Fira Code','Courier New',monospace",color:T.text,paddingBottom:40 }}>
+      <style>{CSS}</style>
+
+      {newAch && <div style={{ position:"fixed",top:60,left:"50%",transform:"translateX(-50%)",zIndex:200,background:"linear-gradient(135deg,rgba(255,215,0,.18),rgba(255,215,0,.06))",border:"1px solid rgba(255,215,0,.4)",borderRadius:12,padding:"10px 20px",display:"flex",alignItems:"center",gap:10,animation:"slideDown .4s ease-out",backdropFilter:"blur(10px)" }}>
+        <span style={{ fontSize:28 }}>{newAch.icon}</span>
+        <div><div style={{ fontSize:14,fontWeight:800,color:"#ffd700" }}>Achievement Unlocked!</div><div style={{ fontSize:13,color:T.text }}>{newAch.title}</div></div>
+      </div>}
+
+      <header style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 14px",borderBottom:"1px solid "+T.headerBorder,background:T.headerBg,position:"sticky",top:0,zIndex:20,backdropFilter:"blur(12px)" }}>
+        <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+          <span style={{ fontSize:20 }}>{"🧪"}</span>
+          <div>
+            <h1 style={{ fontSize:17,fontWeight:800,margin:0,background:"linear-gradient(90deg,#00e676,#40c4ff)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent" }}>Lab Craft</h1>
+            <p style={{ fontSize:10,color:T.textDim,margin:0 }}>{log.length}/{RXN.length} found | {totalScore} pts | {earnedAch.length} badges</p>
+          </div>
+        </div>
+        <div style={{ display:"flex",gap:4 }}>
+          <button onClick={function(){setTheme(theme==="dark"?"light":"dark")}} title="Toggle theme" style={{ ...B(),color:T.isLight?"#ff9100":"#ffd54f",background:T.isLight?"rgba(255,145,0,.08)":"rgba(255,213,79,.08)",borderColor:T.isLight?"rgba(255,145,0,.25)":"rgba(255,213,79,.25)" }}>{T.isLight?"☀":"🌙"}</button>
+          <button onClick={function(){setSoundOn(!soundOn)}} style={{ ...B(),color:soundOn?"#00e676":T.textDim,background:soundOn?"rgba(0,230,118,.08)":T.surfaceAlt }}>{soundOn?"ON":"OFF"}</button>
+          <button onClick={clearAll} style={{ ...B(),color:"#ef5350",borderColor:"rgba(255,80,80,.2)",background:"rgba(255,80,80,.08)" }}>Clear</button>
+        </div>
+      </header>
+
+      {timedActive && <div style={{ background:"linear-gradient(90deg,rgba(255,23,68,.1),rgba(255,215,0,.1))",borderBottom:"1px solid rgba(255,215,0,.2)",padding:"6px 14px",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+        <div style={{ fontSize:13,fontWeight:700,color:"#ffd700" }}>TIMED {timedTime}s | {timedFound.length} found</div>
+        <button onClick={function(){setTimedActive(false);if(!timedBest||timedFound.length>timedBest)setTimedBest(timedFound.length)}} style={{ ...B(),color:"#ef5350",borderColor:"rgba(255,80,80,.3)",background:"rgba(255,80,80,.1)" }}>Stop</button>
+      </div>}
+
+      <div style={{ display:"flex",borderBottom:"1px solid "+T.headerBorder,overflowX:"auto" }}>
+        {[["lab","Lab"],["periodic","Table"],["log","Log "+log.length],["challenge","Quests "+cDone.length],["badges","Badges "+earnedAch.length],["stats","Stats"]].map(function(pair) {
+          return <button key={pair[0]} onClick={function(){setTab(pair[0])}} style={{ flex:1,padding:"12px 4px",fontSize:14,fontWeight:700,fontFamily:"inherit",cursor:"pointer",border:"none",borderBottom:tab===pair[0]?"2px solid #00e676":"2px solid transparent",background:"transparent",color:tab===pair[0]?"#00e676":T.textDim,whiteSpace:"nowrap",minWidth:0 }}>{pair[1]}</button>;
+        })}
+      </div>
+
+      {tab === "periodic" && <PTView T={T}/>}
+
+      {tab === "lab" && <div>
+        <div style={{ display:"flex",gap:3,padding:"6px 14px 2px",overflowX:"auto" }}>
+          {LTAGS.map(function(t){return <button key={t} onClick={function(){setFilter(t)}} style={{ padding:"7px 14px",borderRadius:18,fontSize:13,fontWeight:700,fontFamily:"inherit",cursor:"pointer",whiteSpace:"nowrap",background:filter===t?"rgba(0,230,118,.14)":T.surfaceAlt,border:"1px solid "+(filter===t?"rgba(0,230,118,.4)":T.borderSoft),color:filter===t?"#00e676":T.textDim }}>{t}</button>})}
+        </div>
+        <div style={{ padding:"3px 14px 0" }}>
+          <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:4 }}>
+            {filtered.map(function(item) {
+              var onB = !!bench.find(function(b){return b.id===item.id});
+              var isH = hints.indexOf(item.id) !== -1;
+              return <button key={item.id} onClick={function(){addItem(item)}} disabled={onB||bench.length>=2} style={{ background:isH?"rgba(0,230,118,.1)":onB?"rgba(0,230,118,.06)":"rgba(255,255,255,.02)",border:"1.5px solid "+(isH?"#00e67666":onB?"#00e67633":"rgba(255,255,255,.04)"),borderRadius:8,padding:"5px 2px",display:"flex",flexDirection:"column",alignItems:"center",gap:1,fontFamily:"inherit",opacity:onB?0.3:bench.length>=2&&!isH?0.4:1,cursor:onB||bench.length>=2?"default":"pointer",animation:isH?"hintPulse 1.5s infinite":"none" }}>
+                <span style={{ fontSize:16 }}>{item.icon}</span>
+                <span style={{ fontSize:11,fontWeight:700,color:item.color }}>{item.name}</span>
+                <span style={{ fontSize:9,color:T.textMute }}>{rxnCount(item.id)}</span>
+                {isH && <span style={{ fontSize:8,color:"#00e676" }}>{"✓"}</span>}
+              </button>;
+            })}
+          </div>
+        </div>
+
+        <div style={{ display:"flex",justifyContent:"center",gap:6,padding:"5px 14px 0" }}>
+          <button onClick={function(){setHeat(!heat)}} style={{ padding:"4px 10px",borderRadius:14,fontSize:11,fontWeight:600,fontFamily:"inherit",cursor:"pointer",background:heat?"rgba(255,106,0,.12)":"rgba(255,255,255,.02)",border:"1px solid "+(heat?"rgba(255,106,0,.3)":"rgba(255,255,255,.04)"),color:heat?"#ff6a00":T.textMute }}>{heat?"Burner ON":"Burner OFF"}</button>
+          {!timedActive && <button onClick={function(){startTimed();setTab("lab")}} style={{ padding:"4px 10px",borderRadius:14,fontSize:11,fontWeight:600,fontFamily:"inherit",cursor:"pointer",background:"rgba(255,215,0,.08)",border:"1px solid rgba(255,215,0,.2)",color:"#ffd700" }}>60s Challenge</button>}
+        </div>
+
+        <div style={{ margin:"5px 14px 0",background:T.beakerBg,border:"1.5px solid "+T.headerBorder,borderRadius:12,padding:"10px 8px",position:"relative",overflow:"hidden" }}>
+          <div style={{ display:"flex",alignItems:"flex-start",justifyContent:"center",gap:6,position:"relative",zIndex:2,flexWrap:"wrap" }}>
+            {[0,1].map(function(i) {
+              var item = bench[i];
+              if (item) return <div key={i} style={{ width:72 }}>
+                <div onClick={function(){removeItem(item.id)}} style={{ background:item.color+"08",border:"1.5px solid "+item.color+"44",borderRadius:10,padding:"7px 2px",textAlign:"center",cursor:"pointer",position:"relative",animation:"popIn .3s" }}>
+                  <div style={{ position:"absolute",top:-4,right:-4,width:14,height:14,borderRadius:"50%",background:"#ef5350",color:"#fff",fontSize:11,display:"flex",alignItems:"center",justifyContent:"center" }}>x</div>
+                  <div style={{ fontSize:20 }}>{item.icon}</div>
+                  <div style={{ fontSize:11,fontWeight:700,color:item.color }}>{item.name}</div>
+                </div>
+              </div>;
+              return <div key={i} style={{ width:72 }}>
+                <div style={{ border:"1.5px dashed "+T.headerBorder,borderRadius:10,padding:"12px 2px",textAlign:"center" }}>
+                  <div style={{ fontSize:17,color:T.textMute }}>+</div>
+                </div>
+              </div>;
+            })}
+            <div style={{ fontSize:17,color:T.textMute,alignSelf:"center" }}>{">"}</div>
+            <div style={{ display:"flex",alignItems:"flex-end",gap:4 }}>
+              <Beaker bench={bench} running={running} done={done} color={result?result.color:(reaction?reaction.color:T.textDim)} T={T}/>
+              <Thermometer temp={result?result.temp:(reaction?reaction.temp:null)} active={running||done} T={T}/>
+            </div>
+          </div>
+          {particles.map(function(p) {
+            return <div key={p.id} style={{ position:"absolute",left:p.x+"%",top:p.y+"%",width:p.sz,height:p.sz,borderRadius:"50%",background:p.color,opacity:p.life,pointerEvents:"none",boxShadow:"0 0 "+p.sz+"px "+p.color+"88",zIndex:10 }} />;
+          })}
+          <div style={{ textAlign:"center",fontSize:12,marginTop:8,minHeight:12,zIndex:2,position:"relative" }}>
+            {bench.length===0 && <span style={{ color:T.textDim }}>Tap 2 chemicals above</span>}
+            {bench.length===1 && <span style={{ color:T.textDim }}>Pick one more <span style={{ color:"#00e676",fontSize:10 }}>(green = compatible)</span></span>}
+            {bench.length===2 && !reaction && <span style={{ color:"#ef5350" }}>No reaction - try different combo!</span>}
+            {bench.length===2 && reaction && !running && !done && <span style={{ color:"#00e676" }}>{reaction.name}</span>}
+            {running && <span style={{ color:"#ffc107" }}>Reacting...</span>}
+            {done && <span style={{ color:"#00e676" }}>Results below</span>}
+          </div>
+          <button onClick={runExperiment} disabled={!reaction||running||done} style={{ width:"100%",padding:10,border:"none",borderRadius:8,fontSize:13,fontWeight:800,letterSpacing:".06em",fontFamily:"inherit",marginTop:5,background:reaction&&!running&&!done?"linear-gradient(135deg,#00e676,#00c853)":T.surfaceAlt,color:reaction&&!running&&!done?"#000":T.textDim,cursor:reaction&&!running&&!done?"pointer":"default" }}>
+            {running ? "REACTING..." : done ? "DONE" : reaction ? "MIX & REACT" : "SELECT 2 ITEMS"}
+          </button>
+        </div>
+
+        {result && <div style={{ margin:"8px 14px 0",background:T.isLight?"rgba(255,255,255,.85)":"rgba(6,10,18,.9)",border:"1px solid "+T.headerBorder,borderRadius:12,padding:10,animation:"fadeUp .5s ease-out" }}>
+          <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:8 }}>
+            <div style={{ width:40,height:40,borderRadius:"50%",background:"linear-gradient(135deg,#00e676,#00c853)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
+              <span style={{ fontSize:17,fontWeight:900,color:"#000" }}>{result.score}</span>
+            </div>
+            <div>
+              <h2 style={{ fontSize:14,fontWeight:800,margin:0,color:T.text }}>{result.name}</h2>
+              <div style={{ display:"inline-block",fontSize:9,padding:"2px 6px",borderRadius:4,marginTop:2,background:result.color+"15",color:result.color,border:"1px solid "+result.color+"28",fontWeight:600 }}>{result.type.replace("_"," ")}</div>
+            </div>
+          </div>
+          <div style={{ background:"rgba(0,230,118,.04)",border:"1px solid rgba(0,230,118,.1)",borderRadius:6,padding:7,marginBottom:5 }}>
+            <div style={{ fontSize:9,color:"#00e676",fontWeight:700 }}>EQUATION</div>
+            <div style={{ fontSize:13,color:T.isLight?"#2e7d32":"#a5d6a7",marginTop:2 }}>{result.eq}</div>
+          </div>
+
+          {/* Molecule 3D-style view of products */}
+          {(function() {
+            var prods = parseProducts(result.eq);
+            if (!prods.length) return null;
+            return (
+              <div style={{ background:T.isLight?"rgba(64,196,255,.06)":"rgba(64,196,255,.04)",border:"1px solid rgba(64,196,255,.18)",borderRadius:8,padding:8,marginBottom:5 }}>
+                <div style={{ fontSize:9,color:"#40c4ff",fontWeight:700,marginBottom:4 }}>MOLECULAR STRUCTURE</div>
+                <div style={{ display:"flex",justifyContent:"center",gap:14,flexWrap:"wrap" }}>
+                  {prods.slice(0,3).map(function(p,i) {
+                    return <MoleculeView key={i} molKey={p} T={T}/>;
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+          <div style={{ display:"flex",gap:4,marginBottom:5 }}>
+            <div style={{ flex:1,background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.04)",borderRadius:5,padding:5,textAlign:"center" }}>
+              <div style={{ fontSize:15 }}>{result.temp==="exo"?"🔥":result.temp==="endo"?"❄️":"--"}</div>
+              <div style={{ fontSize:9,fontWeight:700,color:result.temp==="exo"?"#ff6a00":result.temp==="endo"?"#00bcd4":T.textMute }}>{result.temp==="exo"?"EXOTHERMIC":result.temp==="endo"?"ENDOTHERMIC":"NEUTRAL"}</div>
+            </div>
+            <div style={{ flex:1,background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.04)",borderRadius:5,padding:5,textAlign:"center" }}>
+              <div style={{ fontSize:13,color:scol(result.speed),fontWeight:700 }}>{sdots(result.speed)}</div>
+              <div style={{ fontSize:9,fontWeight:700,color:scol(result.speed),marginTop:1 }}>{result.speed.toUpperCase()}</div>
+            </div>
+          </div>
+          {result.pH !== null && <div style={{ background:"rgba(255,255,255,.02)",borderRadius:5,padding:6,marginBottom:5 }}>
+            <div style={{ height:7,borderRadius:4,background:"linear-gradient(90deg,#ff1744,#ff5722,#ffab00,#cddc39,#76ff03,#00e5ff,#2979ff,#7c4dff)",position:"relative" }}>
+              <div style={{ position:"absolute",left:(result.pH/14*100)+"%",top:-2,transform:"translateX(-50%)",width:7,height:11,borderRadius:4,border:"2px solid #fff",background:pHColor(result.pH),boxShadow:"0 0 5px "+pHColor(result.pH) }} />
+            </div>
+            <div style={{ fontSize:11,color:pHColor(result.pH),fontWeight:700,marginTop:2 }}>pH {result.pH} - {pHLabel(result.pH)}</div>
+          </div>}
+          {result.safety && <div style={{ background:"rgba(255,183,77,.04)",border:"1px solid rgba(255,183,77,.08)",borderRadius:5,padding:6,marginBottom:5 }}>
+            <div style={{ fontSize:9,color:"#ffb74d",fontWeight:700 }}>SAFETY</div>
+            <p style={{ fontSize:11,color:T.text,lineHeight:1.4,margin:"2px 0 0" }}>{result.safety}</p>
+          </div>}
+          <div style={{ marginBottom:5 }}>
+            <div style={{ fontSize:10,fontWeight:700,color:"#90caf9" }}>What Happened?</div>
+            <p style={{ fontSize:12,color:T.text,lineHeight:1.5,margin:"2px 0 0" }}>{result.explain}</p>
+          </div>
+          <div style={{ background:"rgba(255,215,0,.04)",border:"1px solid rgba(255,215,0,.08)",borderRadius:5,padding:6,marginBottom:6 }}>
+            <div style={{ fontSize:9,color:"#ffd700",fontWeight:700 }}>FUN FACT</div>
+            <p style={{ fontSize:12,color:T.text,lineHeight:1.4,margin:"2px 0 0" }}>{result.fact}</p>
+          </div>
+          <button onClick={clearAll} style={{ width:"100%",padding:8,background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.05)",borderRadius:5,color:T.textDim,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit" }}>Try Another</button>
+        </div>}
+      </div>}
+
+      {tab === "log" && <div style={{ padding:14 }}>
+        <div style={{ textAlign:"center",marginBottom:10 }}>
+          <div style={{ fontSize:22,fontWeight:900,color:"#00e676" }}>{log.length}<span style={{ fontSize:14,color:T.textMute }}>/{RXN.length}</span></div>
+          <div style={{ height:4,borderRadius:2,background:"rgba(255,255,255,.04)",marginTop:5,overflow:"hidden" }}><div style={{ height:"100%",borderRadius:2,background:"linear-gradient(90deg,#00e676,#00c853)",width:(log.length/RXN.length*100)+"%" }} /></div>
+        </div>
+        {RXN.map(function(r,ri) {
+          var key = r.r.slice().sort().join("+");
+          var found = log.indexOf(key) !== -1;
+          return <div key={ri} style={{ display:"flex",alignItems:"center",gap:5,padding:"5px 7px",marginBottom:2,background:found?"rgba(0,230,118,.04)":"rgba(255,255,255,.01)",border:"1px solid "+(found?"rgba(0,230,118,.08)":"rgba(255,255,255,.02)"),borderRadius:5,opacity:found?1:0.3 }}>
+            <span style={{ fontSize:13 }}>{found?"✅":"🔒"}</span>
+            <div style={{ flex:1 }}><div style={{ fontSize:11,fontWeight:700,color:found?T.text:T.textMute }}>{found?r.name:"???"}</div></div>
+            {found && <span style={{ fontSize:10,color:"#00e676",fontWeight:700 }}>{r.score}</span>}
+          </div>;
+        })}
+      </div>}
+
+      {tab === "challenge" && <div style={{ padding:14 }}>
+        <div style={{ textAlign:"center",marginBottom:10 }}>
+          <div style={{ fontSize:22,fontWeight:900,color:"#ffd700" }}>{cDone.length}<span style={{ fontSize:14,color:T.textMute }}>/{CHALLENGES.length}</span></div>
+        </div>
+        {CHALLENGES.map(function(ch) {
+          var s = cDone.indexOf(ch.id) !== -1;
+          return <div key={ch.id} style={{ display:"flex",alignItems:"center",gap:6,padding:"7px 9px",marginBottom:3,background:s?"rgba(255,215,0,.05)":"rgba(255,255,255,.02)",border:"1px solid "+(s?"rgba(255,215,0,.1)":"rgba(255,255,255,.04)"),borderRadius:7 }}>
+            <span style={{ fontSize:17 }}>{s?"🏆":"🎯"}</span>
+            <div><div style={{ fontSize:12,fontWeight:700,color:s?"#ffd700":T.text }}>{ch.text}</div><div style={{ fontSize:9,color:T.textMute }}>{s?"Done!":"Go to Lab"}</div></div>
+          </div>;
+        })}
+      </div>}
+
+      {tab === "badges" && <div style={{ padding:14 }}>
+        <div style={{ textAlign:"center",marginBottom:10 }}>
+          <div style={{ fontSize:22,fontWeight:900,color:"#ffd700" }}>{earnedAch.length}<span style={{ fontSize:14,color:T.textMute }}>/{ACHIEVEMENTS.length}</span></div>
+        </div>
+        {ACHIEVEMENTS.map(function(a) {
+          var earned = a.check(log);
+          return <div key={a.id} style={{ display:"flex",alignItems:"center",gap:8,padding:"8px 10px",marginBottom:3,background:earned?"rgba(255,215,0,.06)":"rgba(255,255,255,.015)",border:"1px solid "+(earned?"rgba(255,215,0,.15)":"rgba(255,255,255,.03)"),borderRadius:8,opacity:earned?1:0.4 }}>
+            <span style={{ fontSize:22 }}>{earned?a.icon:"🔒"}</span>
+            <div><div style={{ fontSize:13,fontWeight:700,color:earned?"#ffd700":T.textDim }}>{a.title}</div><div style={{ fontSize:11,color:T.textDim }}>{a.desc}</div></div>
+          </div>;
+        })}
+      </div>}
+
+      {tab === "stats" && <div style={{ padding:14 }}>
+        <div style={{ fontSize:17,color:"#ffd700",fontWeight:700,marginBottom:10,textAlign:"center" }}>YOUR STATS</div>
+        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:14 }}>
+          <div style={{ background:"rgba(0,230,118,.06)",border:"1px solid rgba(0,230,118,.15)",borderRadius:10,padding:12,textAlign:"center" }}>
+            <div style={{ fontSize:24,fontWeight:900,color:"#00e676" }}>{totalScore}</div>
+            <div style={{ fontSize:10,color:T.textDim }}>SCORE</div>
+          </div>
+          <div style={{ background:"rgba(64,196,255,.06)",border:"1px solid rgba(64,196,255,.15)",borderRadius:10,padding:12,textAlign:"center" }}>
+            <div style={{ fontSize:24,fontWeight:900,color:"#40c4ff" }}>{log.length}</div>
+            <div style={{ fontSize:10,color:T.textDim }}>REACTIONS</div>
+          </div>
+          <div style={{ background:"rgba(255,215,0,.06)",border:"1px solid rgba(255,215,0,.15)",borderRadius:10,padding:12,textAlign:"center" }}>
+            <div style={{ fontSize:24,fontWeight:900,color:"#ffd700" }}>{earnedAch.length}</div>
+            <div style={{ fontSize:10,color:T.textDim }}>BADGES</div>
+          </div>
+        </div>
+        <div style={{ background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.05)",borderRadius:10,padding:12,marginBottom:12 }}>
+          <div style={{ fontSize:13,fontWeight:700,color:"#ffd700",marginBottom:6 }}>TIMED CHALLENGE</div>
+          <div style={{ fontSize:12,color:T.text,marginBottom:8 }}>Find as many reactions in 60 seconds!</div>
+          {timedBest !== null && <div style={{ fontSize:15,color:"#00e676",fontWeight:700,marginBottom:8 }}>Best: {timedBest} reactions</div>}
+          {!timedActive && <button onClick={function(){startTimed();setTab("lab")}} style={{ width:"100%",padding:10,background:"linear-gradient(135deg,#ffd700,#ff9100)",border:"none",borderRadius:8,fontSize:14,fontWeight:800,color:"#000",cursor:"pointer",fontFamily:"inherit" }}>START 60s CHALLENGE</button>}
+        </div>
+        <div style={{ fontSize:12,fontWeight:700,color:T.textDim,marginBottom:6 }}>TOP SCORES</div>
+        {RXN.filter(function(r){return log.indexOf(r.r.slice().sort().join("+"))!==-1}).sort(function(a,b){return b.score-a.score}).slice(0,10).map(function(r,i) {
+          return <div key={i} style={{ display:"flex",alignItems:"center",gap:6,padding:"5px 8px",marginBottom:2,background:"rgba(255,255,255,.02)",borderRadius:5 }}>
+            <span style={{ fontSize:13,fontWeight:900,color:i===0?"#ffd700":i===1?T.text:T.textDim,width:16 }}>#{i+1}</span>
+            <span style={{ flex:1,fontSize:11,color:T.text }}>{r.name}</span>
+            <span style={{ fontSize:12,fontWeight:700,color:"#00e676" }}>{r.score}</span>
+          </div>;
+        })}
+        {log.length === 0 && <div style={{ textAlign:"center",color:T.textMute,fontSize:13,padding:20 }}>No reactions yet! Go experiment!</div>}
+      </div>}
+    </div>
+  );
+}
+
+var CSS = [
+  "*{box-sizing:border-box;margin:0;padding:0}",
+  "body{margin:0;background:#060710}",
+  "button:active{transform:scale(.97)}",
+  "@keyframes popIn{0%{transform:scale(.7);opacity:0}100%{transform:scale(1);opacity:1}}",
+  "@keyframes fadeUp{0%{transform:translateY(16px);opacity:0}100%{transform:translateY(0);opacity:1}}",
+  "@keyframes shake{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}",
+  "@keyframes hintPulse{0%,100%{box-shadow:0 0 0 0 rgba(0,230,118,0)}50%{box-shadow:0 0 0 4px rgba(0,230,118,.15)}}",
+  "@keyframes slideDown{0%{transform:translate(-50%,-30px);opacity:0}100%{transform:translate(-50%,0);opacity:1}}",
+  "::-webkit-scrollbar{display:none}",
+].join("\n");
+
+
+/* ═══ MAIN MENU + APP SHELL ═══ */
+function MainMenu(props) {
+  var isLight = props.theme === "light";
+  var bgGrad = isLight
+    ? "radial-gradient(ellipse at center,#f5f8fc 0%,#dde6f0 70%)"
+    : "radial-gradient(ellipse at center,#0d1226 0%,#060710 70%)";
+  var subColor = isLight ? "#5a6378" : "#7a8599";
+  var footColor = isLight ? "#8a94a6" : "#4a5266";
+  return (
+    <div style={{ position:"fixed",inset:0,background:bgGrad,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:"'Courier New',monospace",padding:24 }}>
+      <button
+        onClick={function(){props.setTheme(isLight?"dark":"light")}}
+        style={{ position:"absolute",top:16,right:16,width:38,height:38,borderRadius:"50%",border:"1px solid "+(isLight?"rgba(0,0,0,.15)":"rgba(255,255,255,.15)"),background:isLight?"rgba(255,255,255,.6)":"rgba(255,255,255,.05)",fontSize:16,cursor:"pointer",fontFamily:"inherit" }}
+      >{isLight?"☀":"🌙"}</button>
+
+      <div style={{ fontSize:78,animation:"float 2.4s ease-in-out infinite",filter:"drop-shadow(0 0 22px rgba(0,230,118,.55))" }}>⚗️</div>
+      <div style={{ marginTop:20,fontSize:28,fontWeight:900,letterSpacing:4,color:"#00e676",textShadow:"0 0 16px rgba(0,230,118,.6)",textAlign:"center" }}>LAB CRAFT</div>
+      <div style={{ marginTop:6,fontSize:14,letterSpacing:3,color:subColor }}>MIX • REACT • DISCOVER</div>
+
+      <button
+        onClick={props.onPlay}
+        style={{
+          marginTop:54,padding:"18px 64px",
+          background:"linear-gradient(135deg,#00e676,#00b248)",
+          border:"none",borderRadius:14,
+          fontSize:18,fontWeight:900,letterSpacing:3,color:"#000",
+          cursor:"pointer",fontFamily:"inherit",
+          animation:"glow 2.2s ease-in-out infinite"
+        }}
+      >▶ PLAY</button>
+
+      <div style={{ marginTop:48,fontSize:12,color:footColor,letterSpacing:2 }}>v1.0 • 118 elements • 100+ reactions</div>
+    </div>
+  );
+}
+
+function LoadingDialog(props) {
+  return (
+    <div style={{ position:"fixed",inset:0,background:"rgba(6,7,16,.92)",backdropFilter:"blur(4px)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:"'Courier New',monospace",zIndex:10000 }}>
+      <div style={{ width:48,height:48,border:"3px solid rgba(0,230,118,.15)",borderTopColor:"#00e676",borderRadius:"50%",animation:"spin 1s linear infinite" }}/>
+      <div style={{ marginTop:18,fontSize:15,fontWeight:700,color:"#00e676",letterSpacing:2 }}>{props.message || "LOADING..."}</div>
+      {props.sub && <div style={{ marginTop:6,fontSize:12,color:"#7a8599",letterSpacing:1 }}>{props.sub}</div>}
+    </div>
+  );
+}
+
+function App() {
+  const [screen, setScreen] = useState("menu"); // "menu" | "loading" | "lab"
+  const [theme, setTheme] = useState("dark");
+  const screenRef = useRef(screen);
+  useEffect(function() { screenRef.current = screen; }, [screen]);
+
+  // Lowest-priority back handler: lab → menu, menu → exit
+  useEffect(function() {
+    return window.pushBackHandler(function() {
+      var s = screenRef.current;
+      if (s === "lab") { setScreen("menu"); return true; }
+      // On menu (or loading): let the native exit happen
+      return false;
+    });
+  }, []);
+
+  const handlePlay = useCallback(function() {
+    setScreen("loading");
+    // Defer mount so the loading dialog actually paints before the heavy
+    // LabCraft component initializes (it builds 118 elements + reactions).
+    setTimeout(function() {
+      setScreen("lab");
+    }, 50);
+  }, []);
+
+  if (screen === "menu") return <MainMenu onPlay={handlePlay} theme={theme} setTheme={setTheme} />;
+  if (screen === "loading") return <LoadingDialog message="PREPARING LAB" sub="Setting up elements & reactions" />;
+  return <LabCraft theme={theme} setTheme={setTheme} />;
+}
+
+// Mount the app
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(React.createElement(App));
+
+</script>
+
+</body>
+</html>

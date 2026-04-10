@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sed -i.bak -e 's/fontSize:14\\\\b/fontSize:17/g' -e 's/fontSize:13\\\\b/fontSize:16/g' -e 's/fontSize:12\\\\b/fontSize:15/g' -e 's/fontSize:11\\\\b/fontSize:14/g' -e 's/fontSize:10\\\\b/fontSize:13/g' -e 's/fontSize:9\\\\b/fontSize:12/g' -e 's/fontSize:8\\\\b/fontSize:11/g' -e 's/fontSize:7\\\\b/fontSize:10/g' -e 's/fontSize:6\\\\b/fontSize:9/g' -e 's/fontSize:5\\\\b/fontSize:8/g' index.html)",
+      "Bash(rm index.html.bak)",
+      "Bash(sed -i.bak -e 's/fontSize=\"7\"/fontSize=\"9\"/g' -e 's/fontSize={a\\\\[3\\\\]>10?9:7}/fontSize={a[3]>10?11:9}/g' index.html)",
+      "Bash(sed -i.bak -e 's/color:\"#888\"/color:T.textDim/g' -e 's/color:\"#666\"/color:T.textDim/g' -e 's/color:\"#555\"/color:T.textMute/g' -e 's/color:\"#444\"/color:T.textMute/g' -e 's/color:\"#333\"/color:T.textMute/g' -e 's/color:\"#ddd\"/color:T.text/g' -e 's/color:\"#ccc\"/color:T.text/g' -e 's/color:\"#bbb\"/color:T.text/g' index.html)",
+      "Bash(sed -i.bak -e 's|color:heat?\"#ff6a00\":\"#444\"|color:heat?\"#ff6a00\":T.textMute|g' -e 's|color:result.temp===\"exo\"?\"#ff6a00\":result.temp===\"endo\"?\"#00bcd4\":\"#555\"|color:result.temp===\"exo\"?\"#ff6a00\":result.temp===\"endo\"?\"#00bcd4\":T.textMute|g' -e 's|color:found?\"#ddd\":\"#555\"|color:found?T.text:T.textMute|g' -e 's|color:s?\"#ffd700\":\"#ddd\"|color:s?\"#ffd700\":T.text|g' -e 's|color:earned?\"#ffd700\":\"#666\"|color:earned?\"#ffd700\":T.textDim|g' -e 's|color:i===0?\"#ffd700\":i===1?\"#bbb\":\"#666\"|color:i===0?\"#ffd700\":i===1?T.text:T.textDim|g' index.html)",
+      "Bash(magick -version)",
+      "Bash(convert -version)",
+      "Bash(ls *.gradle settings.gradle gradle.properties)"
+    ]
+  }
+}
