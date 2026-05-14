@@ -2,27 +2,47 @@ package com.royals.labcraft
 
 import android.annotation.SuppressLint
 import android.os.Bundle
-import android.view.View
 import android.view.WindowManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdSize
+import com.google.android.gms.ads.AdView
+import com.google.android.gms.ads.LoadAdError
+import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.interstitial.InterstitialAd
+import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
+    private lateinit var bannerAdView: AdView
+    private var interstitialAd: InterstitialAd? = null
 
-    /** Bridge object exposed to JS as `window.Android` */
     inner class WebAppInterface {
         @JavascriptInterface
         fun exitApp() {
             runOnUiThread { finish() }
+        }
+
+        /** Call from JS: window.Android.showInterstitialAd() — e.g., between levels */
+        @JavascriptInterface
+        fun showInterstitialAd() {
+            runOnUiThread {
+                interstitialAd?.let {
+                    it.show(this@MainActivity)
+                    interstitialAd = null
+                    loadInterstitialAd()
+                }
+            }
         }
     }
 
@@ -30,7 +50,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Fullscreen immersive
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
@@ -39,15 +58,35 @@ class MainActivity : AppCompatActivity() {
         controller.systemBarsBehavior =
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 
-        // Set status bar color
         window.statusBarColor = android.graphics.Color.parseColor("#060710")
         window.navigationBarColor = android.graphics.Color.parseColor("#060710")
 
-        // Create WebView
-        webView = WebView(this)
-        setContentView(webView)
+        // Layout: WebView fills space, banner pinned at bottom
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(android.graphics.Color.parseColor("#060710"))
+        }
 
-        // Configure WebView
+        webView = WebView(this)
+        container.addView(
+            webView,
+            LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f)
+        )
+
+        bannerAdView = AdView(this).apply {
+            adUnitId = BuildConfig.BANNER_AD_UNIT_ID
+            setAdSize(AdSize.BANNER)
+        }
+        container.addView(
+            bannerAdView,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        setContentView(container)
+
         webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
@@ -65,33 +104,53 @@ class MainActivity : AppCompatActivity() {
 
         webView.webViewClient = WebViewClient()
         webView.webChromeClient = WebChromeClient()
-
-        // Expose Android bridge to JS so the web app can call exitApp() etc.
         webView.addJavascriptInterface(WebAppInterface(), "Android")
-
-        // Set background
         webView.setBackgroundColor(android.graphics.Color.parseColor("#060710"))
-
-        // Load the app
         webView.loadUrl("file:///android_asset/index.html")
+
+        MobileAds.initialize(this) {
+            bannerAdView.loadAd(AdRequest.Builder().build())
+            loadInterstitialAd()
+        }
+    }
+
+    private fun loadInterstitialAd() {
+        InterstitialAd.load(
+            this,
+            BuildConfig.INTERSTITIAL_AD_UNIT_ID,
+            AdRequest.Builder().build(),
+            object : InterstitialAdLoadCallback() {
+                override fun onAdLoaded(ad: InterstitialAd) {
+                    interstitialAd = ad
+                }
+                override fun onAdFailedToLoad(error: LoadAdError) {
+                    interstitialAd = null
+                }
+            }
+        )
     }
 
     @Suppress("DEPRECATION")
     override fun onBackPressed() {
-        // Hand the back press to the JS app first. If JS has a registered
-        // handler it will navigate within the app (close modal, switch tab,
-        // return to menu, …). If no handler is registered, fall back to the
-        // default behaviour (exit the activity).
         webView.evaluateJavascript(
             "(function(){if(typeof window.handleAndroidBack==='function'){try{window.handleAndroidBack();return true;}catch(e){return false;}}return false;})()"
         ) { result ->
-            if (result != "true") {
-                finish()
-            }
+            if (result != "true") finish()
         }
     }
 
+    override fun onPause() {
+        bannerAdView.pause()
+        super.onPause()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        bannerAdView.resume()
+    }
+
     override fun onDestroy() {
+        bannerAdView.destroy()
         webView.destroy()
         super.onDestroy()
     }
