@@ -1,12 +1,12 @@
 1<?xml version="1.0" encoding="utf-8"?>
 2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
 3    package="com.royals.labcraft"
-4    android:versionCode="3"
-5    android:versionName="1.2" >
+4    android:versionCode="11"
+5    android:versionName="2.2" >
 6
 7    <uses-sdk
 8        android:minSdkVersion="24"
-9        android:targetSdkVersion="35" />
+9        android:targetSdkVersion="36" />
 10
 11    <uses-permission android:name="android.permission.INTERNET" />
 11-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:5:5-67
@@ -14,141 +14,143 @@
 12    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 12-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:6:5-79
 12-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:6:22-76
-13    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
-13-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:26:5-79
-13-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:26:22-76
-14    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_AD_ID" />
-14-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:27:5-82
-14-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:27:22-79
-15    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION" />
-15-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:28:5-88
-15-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:28:22-85
-16    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_TOPICS" /> <!-- Android package visibility setting -->
-16-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:29:5-83
-16-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:29:22-80
-17    <queries>
-17-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:35:5-68:15
-18
-19        <!-- For browser content -->
-20        <intent>
-20-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:38:9-44:18
-21            <action android:name="android.intent.action.VIEW" />
-21-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:39:13-65
-21-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:39:21-62
-22
-23            <category android:name="android.intent.category.BROWSABLE" />
-23-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:41:13-74
-23-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:41:23-71
-24
-25            <data android:scheme="https" />
-25-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:43:13-44
-25-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:43:19-41
-26        </intent>
-27        <!-- End of browser content -->
-28        <!-- For CustomTabsService -->
-29        <intent>
-29-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:47:9-49:18
-30            <action android:name="android.support.customtabs.action.CustomTabsService" />
-30-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:48:13-90
-30-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:48:21-87
-31        </intent>
-32        <!-- End of CustomTabsService -->
-33        <!-- For MRAID capabilities -->
-34        <intent>
-34-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:52:9-56:18
-35            <action android:name="android.intent.action.INSERT" />
-35-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:53:13-67
-35-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:53:21-64
-36
-37            <data android:mimeType="vnd.android.cursor.dir/event" />
-37-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:43:13-44
-38        </intent>
-39        <intent>
-39-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:57:9-61:18
-40            <action android:name="android.intent.action.VIEW" />
-40-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:39:13-65
-40-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:39:21-62
-41
-42            <data android:scheme="sms" />
-42-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:43:13-44
-42-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:43:19-41
-43        </intent>
-44        <intent>
-44-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:62:9-66:18
-45            <action android:name="android.intent.action.DIAL" />
-45-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:63:13-65
-45-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:63:21-62
-46
-47            <data android:path="tel:" />
-47-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:43:13-44
-48        </intent>
-49        <!-- End of MRAID capabilities -->
-50    </queries>
-51
-52    <uses-permission android:name="android.permission.WAKE_LOCK" />
-52-->[com.google.android.gms:play-services-measurement-sdk-api:20.1.2] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\e4cfdd36298814b636c8fd3ec40da954\transformed\play-services-measurement-sdk-api-20.1.2\AndroidManifest.xml:25:5-68
-52-->[com.google.android.gms:play-services-measurement-sdk-api:20.1.2] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\e4cfdd36298814b636c8fd3ec40da954\transformed\play-services-measurement-sdk-api-20.1.2\AndroidManifest.xml:25:22-65
-53    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-53-->[androidx.work:work-runtime:2.7.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\0c724222c310219c39517bd328a4e116\transformed\work-runtime-2.7.0\AndroidManifest.xml:28:5-77
-53-->[androidx.work:work-runtime:2.7.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\0c724222c310219c39517bd328a4e116\transformed\work-runtime-2.7.0\AndroidManifest.xml:28:22-74
-54
-55    <permission
-55-->[androidx.core:core:1.13.1] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\637249ad1df056a73431289eb20df326\transformed\core-1.13.1\AndroidManifest.xml:22:5-24:47
-56        android:name="com.royals.labcraft.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
-56-->[androidx.core:core:1.13.1] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\637249ad1df056a73431289eb20df326\transformed\core-1.13.1\AndroidManifest.xml:23:9-81
-57        android:protectionLevel="signature" />
-57-->[androidx.core:core:1.13.1] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\637249ad1df056a73431289eb20df326\transformed\core-1.13.1\AndroidManifest.xml:24:9-44
-58
-59    <uses-permission android:name="com.royals.labcraft.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
-59-->[androidx.core:core:1.13.1] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\637249ad1df056a73431289eb20df326\transformed\core-1.13.1\AndroidManifest.xml:26:5-97
-59-->[androidx.core:core:1.13.1] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\637249ad1df056a73431289eb20df326\transformed\core-1.13.1\AndroidManifest.xml:26:22-94
-60
-61    <application
-61-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:8:5-31:19
-62        android:allowBackup="true"
-62-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:9:9-35
-63        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
-63-->[androidx.core:core:1.13.1] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\637249ad1df056a73431289eb20df326\transformed\core-1.13.1\AndroidManifest.xml:28:18-86
-64        android:debuggable="true"
-65        android:extractNativeLibs="false"
-66        android:hardwareAccelerated="true"
-66-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:15:9-43
-67        android:icon="@mipmap/ic_launcher"
-67-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:10:9-43
-68        android:label="@string/app_name"
-68-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:11:9-41
-69        android:roundIcon="@mipmap/ic_launcher"
-69-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:12:9-48
-70        android:supportsRtl="true"
-70-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:13:9-35
-71        android:testOnly="true"
+13    <uses-permission android:name="android.permission.VIBRATE" />
+13-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:7:5-66
+13-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:7:22-63
+14    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
+14-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:26:5-79
+14-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:26:22-76
+15    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_AD_ID" />
+15-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:27:5-82
+15-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:27:22-79
+16    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_ATTRIBUTION" />
+16-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:28:5-88
+16-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:28:22-85
+17    <uses-permission android:name="android.permission.ACCESS_ADSERVICES_TOPICS" /> <!-- Android package visibility setting -->
+17-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:29:5-83
+17-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:29:22-80
+18    <queries>
+18-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:35:5-68:15
+19
+20        <!-- For browser content -->
+21        <intent>
+21-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:38:9-44:18
+22            <action android:name="android.intent.action.VIEW" />
+22-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:39:13-65
+22-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:39:21-62
+23
+24            <category android:name="android.intent.category.BROWSABLE" />
+24-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:41:13-74
+24-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:41:23-71
+25
+26            <data android:scheme="https" />
+26-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:43:13-44
+26-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:43:19-41
+27        </intent>
+28        <!-- End of browser content -->
+29        <!-- For CustomTabsService -->
+30        <intent>
+30-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:47:9-49:18
+31            <action android:name="android.support.customtabs.action.CustomTabsService" />
+31-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:48:13-90
+31-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:48:21-87
+32        </intent>
+33        <!-- End of CustomTabsService -->
+34        <!-- For MRAID capabilities -->
+35        <intent>
+35-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:52:9-56:18
+36            <action android:name="android.intent.action.INSERT" />
+36-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:53:13-67
+36-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:53:21-64
+37
+38            <data android:mimeType="vnd.android.cursor.dir/event" />
+38-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:43:13-44
+39        </intent>
+40        <intent>
+40-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:57:9-61:18
+41            <action android:name="android.intent.action.VIEW" />
+41-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:39:13-65
+41-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:39:21-62
+42
+43            <data android:scheme="sms" />
+43-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:43:13-44
+43-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:43:19-41
+44        </intent>
+45        <intent>
+45-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:62:9-66:18
+46            <action android:name="android.intent.action.DIAL" />
+46-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:63:13-65
+46-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:63:21-62
+47
+48            <data android:path="tel:" />
+48-->[com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:43:13-44
+49        </intent>
+50        <!-- End of MRAID capabilities -->
+51    </queries>
+52
+53    <uses-permission android:name="android.permission.WAKE_LOCK" />
+53-->[com.google.android.gms:play-services-measurement-sdk-api:20.1.2] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\e4cfdd36298814b636c8fd3ec40da954\transformed\play-services-measurement-sdk-api-20.1.2\AndroidManifest.xml:25:5-68
+53-->[com.google.android.gms:play-services-measurement-sdk-api:20.1.2] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\e4cfdd36298814b636c8fd3ec40da954\transformed\play-services-measurement-sdk-api-20.1.2\AndroidManifest.xml:25:22-65
+54    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+54-->[androidx.work:work-runtime:2.7.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\0c724222c310219c39517bd328a4e116\transformed\work-runtime-2.7.0\AndroidManifest.xml:28:5-77
+54-->[androidx.work:work-runtime:2.7.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\0c724222c310219c39517bd328a4e116\transformed\work-runtime-2.7.0\AndroidManifest.xml:28:22-74
+55
+56    <permission
+56-->[androidx.core:core:1.13.1] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\637249ad1df056a73431289eb20df326\transformed\core-1.13.1\AndroidManifest.xml:22:5-24:47
+57        android:name="com.royals.labcraft.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+57-->[androidx.core:core:1.13.1] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\637249ad1df056a73431289eb20df326\transformed\core-1.13.1\AndroidManifest.xml:23:9-81
+58        android:protectionLevel="signature" />
+58-->[androidx.core:core:1.13.1] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\637249ad1df056a73431289eb20df326\transformed\core-1.13.1\AndroidManifest.xml:24:9-44
+59
+60    <uses-permission android:name="com.royals.labcraft.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+60-->[androidx.core:core:1.13.1] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\637249ad1df056a73431289eb20df326\transformed\core-1.13.1\AndroidManifest.xml:26:5-97
+60-->[androidx.core:core:1.13.1] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\637249ad1df056a73431289eb20df326\transformed\core-1.13.1\AndroidManifest.xml:26:22-94
+61
+62    <application
+62-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:9:5-32:19
+63        android:allowBackup="true"
+63-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:10:9-35
+64        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+64-->[androidx.core:core:1.13.1] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\637249ad1df056a73431289eb20df326\transformed\core-1.13.1\AndroidManifest.xml:28:18-86
+65        android:debuggable="true"
+66        android:extractNativeLibs="false"
+67        android:hardwareAccelerated="true"
+67-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:16:9-43
+68        android:icon="@mipmap/ic_launcher"
+68-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:11:9-43
+69        android:label="@string/app_name"
+69-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:12:9-41
+70        android:roundIcon="@mipmap/ic_launcher"
+70-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:13:9-48
+71        android:supportsRtl="true"
+71-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:14:9-35
 72        android:theme="@style/Theme.LabCraft" >
-72-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:14:9-46
+72-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:15:9-46
 73        <meta-data
 74            android:name="com.google.android.gms.ads.APPLICATION_ID"
-74-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:19:13-69
+74-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:20:13-69
 75            android:value="ca-app-pub-3940256099942544~3347511713" />
-75-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:20:13-42
+75-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:21:13-42
 76
 77        <activity
-77-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:21:9-30:20
+77-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:22:9-31:20
 78            android:name="com.royals.labcraft.MainActivity"
-78-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:22:13-41
+78-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:23:13-41
 79            android:configChanges="orientation|screenSize|keyboardHidden"
-79-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:24:13-74
+79-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:25:13-74
 80            android:exported="true"
-80-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:23:13-36
+80-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:24:13-36
 81            android:screenOrientation="portrait" >
-81-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:25:13-49
+81-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:26:13-49
 82            <intent-filter>
-82-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:26:13-29:29
+82-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:27:13-30:29
 83                <action android:name="android.intent.action.MAIN" />
-83-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:27:17-69
-83-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:27:25-66
+83-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:28:17-69
+83-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:28:25-66
 84
 85                <category android:name="android.intent.category.LAUNCHER" />
-85-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:28:17-77
-85-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:28:27-74
+85-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:29:17-77
+85-->D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:29:27-74
 86            </intent-filter>
 87        </activity>
 88        <!-- Include the AdActivity and InAppPurchaseActivity configChanges and themes. -->

@@ -1,16 +1,16 @@
 -- Merging decision tree log ---
 meta-data#com.google.android.gms.ads.APPLICATION_ID
-INJECTED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:18:9-20:45
+INJECTED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:19:9-21:45
 	android:value
 		INJECTED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml
-		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:20:13-42
+		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:21:13-42
 	android:name
-		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:19:13-69
+		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:20:13-69
 manifest
-ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:2:1-33:12
-INJECTED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:2:1-33:12
-INJECTED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:2:1-33:12
-INJECTED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:2:1-33:12
+ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:2:1-34:12
+INJECTED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:2:1-34:12
+INJECTED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:2:1-34:12
+INJECTED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:2:1-34:12
 MERGED from [androidx.appcompat:appcompat-resources:1.7.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\150f29d6f1a53f72bc7fa14bfdb422ce\transformed\appcompat-resources-1.7.0\AndroidManifest.xml:2:1-7:12
 MERGED from [androidx.appcompat:appcompat:1.7.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\13240466eed1ecd66669c916b083894b\transformed\appcompat-1.7.0\AndroidManifest.xml:2:1-7:12
 MERGED from [com.google.android.gms:play-services-ads:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\6b0f90b0015cc345dcda610259d9d6ac\transformed\play-services-ads-23.6.0\AndroidManifest.xml:17:1-25:12
@@ -88,9 +88,13 @@ MERGED from [androidx.work:work-runtime:2.7.0] C:\Users\Sumit Singh\.gradle\cach
 MERGED from [androidx.work:work-runtime:2.7.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\0c724222c310219c39517bd328a4e116\transformed\work-runtime-2.7.0\AndroidManifest.xml:26:5-79
 	android:name
 		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:6:22-76
+uses-permission#android.permission.VIBRATE
+ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:7:5-66
+	android:name
+		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:7:22-63
 application
-ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:8:5-31:19
-INJECTED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:8:5-31:19
+ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:9:5-32:19
+INJECTED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:9:5-32:19
 MERGED from [com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:70:5-110:19
 MERGED from [com.google.android.gms:play-services-ads-lite:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\dfbb97f65cb9ad39ef4621bd32d849f6\transformed\play-services-ads-lite-23.6.0\AndroidManifest.xml:70:5-110:19
 MERGED from [com.google.android.gms:play-services-ads-base:23.6.0] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\941228b5d4a9f1d0a31ff95d21a3eefb\transformed\play-services-ads-base-23.6.0\AndroidManifest.xml:7:5-20
@@ -130,41 +134,41 @@ MERGED from [androidx.room:room-runtime:2.2.5] C:\Users\Sumit Singh\.gradle\cach
 	android:appComponentFactory
 		ADDED from [androidx.core:core:1.13.1] C:\Users\Sumit Singh\.gradle\caches\8.9\transforms\637249ad1df056a73431289eb20df326\transformed\core-1.13.1\AndroidManifest.xml:28:18-86
 	android:supportsRtl
-		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:13:9-35
+		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:14:9-35
 	android:label
-		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:11:9-41
+		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:12:9-41
 	android:hardwareAccelerated
-		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:15:9-43
+		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:16:9-43
 	android:roundIcon
-		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:12:9-48
+		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:13:9-48
 	tools:targetApi
-		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:16:9-29
+		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:17:9-29
 	android:icon
-		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:10:9-43
+		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:11:9-43
 	android:allowBackup
-		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:9:9-35
+		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:10:9-35
 	android:theme
-		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:14:9-46
+		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:15:9-46
 activity#com.royals.labcraft.MainActivity
-ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:21:9-30:20
+ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:22:9-31:20
 	android:screenOrientation
-		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:25:13-49
+		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:26:13-49
 	android:exported
-		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:23:13-36
+		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:24:13-36
 	android:configChanges
-		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:24:13-74
+		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:25:13-74
 	android:name
-		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:22:13-41
+		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:23:13-41
 intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
-ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:26:13-29:29
+ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:27:13-30:29
 action#android.intent.action.MAIN
-ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:27:17-69
+ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:28:17-69
 	android:name
-		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:27:25-66
+		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:28:25-66
 category#android.intent.category.LAUNCHER
-ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:28:17-77
+ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:29:17-77
 	android:name
-		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:28:27-74
+		ADDED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml:29:27-74
 uses-sdk
 INJECTED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
 INJECTED from D:\htmlgames\ChemistryLab\app\src\main\AndroidManifest.xml

@@ -13,7 +13,8 @@
   @keyframes popIn { 0%{transform:scale(.7);opacity:0}100%{transform:scale(1);opacity:1} }
   @keyframes fadeUp { 0%{transform:translateY(16px);opacity:0}100%{transform:translateY(0);opacity:1} }
   @keyframes shake { 0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)} }
-  @keyframes hintPulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,230,118,0)}50%{box-shadow:0 0 0 4px rgba(0,230,118,.15)} }
+  @keyframes hintPulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,230,118,0)}50%{box-shadow:0 0 0 4px rgba(0,230,118,.25)} }
+  @keyframes burnerPulse { 0%,100%{box-shadow:0 0 0 0 rgba(255,106,0,0)}50%{box-shadow:0 0 0 5px rgba(255,106,0,.4)} }
   @keyframes slideDown { 0%{transform:translate(-50%,-30px);opacity:0}100%{transform:translate(-50%,0);opacity:1} }
   @keyframes spin { 0%{transform:rotate(0)}100%{transform:rotate(360deg)} }
   @keyframes pulse { 0%,100%{opacity:.6}50%{opacity:1} }
@@ -32,26 +33,22 @@
   <div class="splash-wrap">
     <div class="splash-flask">⚗️</div>
     <div class="splash-title">LAB CRAFT</div>
-    <div class="splash-sub">v1.0</div>
+    <div class="splash-sub">v2.0 • Offline Ready</div>
     <div class="splash-spinner"></div>
     <div class="splash-msg">Loading engine...</div>
   </div>
 </div>
 
-<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+<!-- Offline Local Scripts -->
+<script src="vendor/react.production.min.js"></script>
+<script src="vendor/react-dom.production.min.js"></script>
+<script src="vendor/babel.min.js"></script>
 
 <script type="text/babel">
 
 const { useState, useRef, useCallback, useEffect, useMemo } = React;
 
-/* ═══ ANDROID BACK NAVIGATION STACK ═══
- * Components register a handler via window.pushBackHandler(fn).
- * The native side calls window.handleAndroidBack() on every back press.
- * Handlers are walked top-of-stack first; the first one that returns true
- * "consumes" the back press. If none consume, the app exits via Android.exitApp().
- */
+/* ═══ ANDROID BACK NAVIGATION STACK ═══ */
 window._backHandlers = window._backHandlers || [];
 window.pushBackHandler = function(fn) {
   window._backHandlers.push(fn);
@@ -66,13 +63,45 @@ window.handleAndroidBack = function() {
       if (window._backHandlers[i]()) return true;
     } catch (e) {}
   }
-  // Nothing handled — exit the app
   if (window.Android && typeof window.Android.exitApp === "function") {
     window.Android.exitApp();
   }
   return true;
 };
 
+/* ═══ NATIVE HAPTIC & ADMOB HELPERS ═══ */
+function triggerHaptic(type) {
+  try {
+    var ms = 12;
+    if (type === "explode") ms = 70;
+    else if (type === "achievement") ms = 45;
+    else if (type === "react") ms = 30;
+    else if (type === "tick") ms = 10;
+    if (window.Android && typeof window.Android.vibrate === "function") {
+      window.Android.vibrate(ms);
+    } else if (navigator.vibrate) {
+      if (type === "explode") navigator.vibrate([40, 30, 60]);
+      else if (type === "achievement") navigator.vibrate([30, 40, 30, 40, 50]);
+      else navigator.vibrate(ms);
+    }
+  } catch(e) {}
+}
+
+var _lastAdTime = 0;
+var _reactionsSinceAd = 0;
+function maybeShowInterstitial(force) {
+  _reactionsSinceAd++;
+  var now = Date.now();
+  if (force || (_reactionsSinceAd >= 4 && now - _lastAdTime > 40000)) {
+    if (window.Android && typeof window.Android.showInterstitialAd === "function") {
+      try {
+        window.Android.showInterstitialAd();
+        _lastAdTime = now;
+        _reactionsSinceAd = 0;
+      } catch(e) {}
+    }
+  }
+}
 
 /* ═══ PERIODIC TABLE (118 elements) ═══ */
 const CC = {
@@ -89,122 +118,121 @@ const PE = [
   [3,"Li","Lithium",6.941,"Alkali Metal",2,1,"[He]2s1",180,1342,0.53,1817,"Lightest metal, floats on water"],
   [4,"Be","Beryllium",9.012,"Alkaline Earth",2,2,"[He]2s2",1287,2469,1.85,1798,"X-ray windows are made of Be"],
   [5,"B","Boron",10.81,"Metalloid",2,13,"[He]2s2 2p1",2076,3927,2.34,1808,"Borax used for cleaning 4000+ yrs"],
-  [6,"C","Carbon",12.01,"Nonmetal",2,14,"[He]2s2 2p2",3550,4027,2.27,-1,"Diamond and graphite are both pure C"],
-  [7,"N","Nitrogen",14.01,"Nonmetal",2,15,"[He]2s2 2p3",-210,-196,1.25,1772,"78% of air is nitrogen"],
-  [8,"O","Oxygen",16.0,"Nonmetal",2,16,"[He]2s2 2p4",-218,-183,1.43,1774,"Liquid oxygen is pale blue"],
-  [9,"F","Fluorine",19.0,"Halogen",2,17,"[He]2s2 2p5",-220,-188,1.7,1886,"Most reactive element"],
+  [6,"C","Carbon",12.011,"Nonmetal",2,14,"[He]2s2 2p2",3550,4027,2.27,-1,"Diamond and graphite are pure C"],
+  [7,"N","Nitrogen",14.007,"Nonmetal",2,15,"[He]2s2 2p3",-210,-196,1.25,1772,"78% of air is nitrogen"],
+  [8,"O","Oxygen",15.999,"Nonmetal",2,16,"[He]2s2 2p4",-218,-183,1.43,1774,"Liquid oxygen is pale blue"],
+  [9,"F","Fluorine",18.998,"Halogen",2,17,"[He]2s2 2p5",-220,-188,1.7,1886,"Most reactive element"],
   [10,"Ne","Neon",20.18,"Noble Gas",2,18,"[He]2s2 2p6",-249,-246,0.9,1898,"Neon signs glow red-orange"],
-  [11,"Na","Sodium",22.99,"Alkali Metal",3,1,"[Ne]3s1",98,883,0.97,1807,"Explodes in water!"],
-  [12,"Mg","Magnesium",24.31,"Alkaline Earth",3,2,"[Ne]3s2",650,1091,1.74,1755,"Burns with blinding white flame"],
-  [13,"Al","Aluminium",26.98,"Post-Transition",3,13,"[Ne]3s2 3p1",660,2519,2.7,1825,"Once more valuable than gold"],
-  [14,"Si","Silicon",28.09,"Metalloid",3,14,"[Ne]3s2 3p2",1414,3265,2.33,1824,"Computer chips - Silicon Valley"],
-  [15,"P","Phosphorus",30.97,"Nonmetal",3,15,"[Ne]3s2 3p3",44,281,1.82,1669,"White P glows in the dark"],
-  [16,"S","Sulfur",32.07,"Nonmetal",3,16,"[Ne]3s2 3p4",115,445,2.07,-1,"Brimstone in the Bible"],
+  [11,"Na","Sodium",22.99,"Alkali Metal",3,1,"[Ne]3s1",98,883,0.97,1807,"Explodes violently in water!"],
+  [12,"Mg","Magnesium",24.305,"Alkaline Earth",3,2,"[Ne]3s2",650,1091,1.74,1755,"Burns with blinding white flame"],
+  [13,"Al","Aluminium",26.982,"Post-Transition",3,13,"[Ne]3s2 3p1",660,2519,2.7,1825,"Once more valuable than gold"],
+  [14,"Si","Silicon",28.085,"Metalloid",3,14,"[Ne]3s2 3p2",1414,3265,2.33,1824,"Computer chips - Silicon Valley"],
+  [15,"P","Phosphorus",30.974,"Nonmetal",3,15,"[Ne]3s2 3p3",44,281,1.82,1669,"White P glows in the dark"],
+  [16,"S","Sulfur",32.06,"Nonmetal",3,16,"[Ne]3s2 3p4",115,445,2.07,-1,"Burns with sapphire-blue flame"],
   [17,"Cl","Chlorine",35.45,"Halogen",3,17,"[Ne]3s2 3p5",-101,-34,3.21,1774,"Purifies drinking water"],
-  [18,"Ar","Argon",39.95,"Noble Gas",3,18,"[Ne]3s2 3p6",-189,-186,1.78,1894,"~1% of atmosphere"],
-  [19,"K","Potassium",39.1,"Alkali Metal",4,1,"[Ar]4s1",64,759,0.86,1807,"Bananas are rich in K"],
-  [20,"Ca","Calcium",40.08,"Alkaline Earth",4,2,"[Ar]4s2",842,1484,1.55,1808,"Bones and teeth"],
-  [21,"Sc","Scandium",44.96,"Transition Metal",4,3,"[Ar]3d1 4s2",1541,2836,2.99,1879,"Aerospace alloys"],
-  [22,"Ti","Titanium",47.87,"Transition Metal",4,4,"[Ar]3d2 4s2",1668,3287,4.51,1791,"Strong as steel, 45% lighter"],
-  [23,"V","Vanadium",50.94,"Transition Metal",4,5,"[Ar]3d3 4s2",1910,3407,6.0,1801,"Strengthens steel"],
-  [24,"Cr","Chromium",52.0,"Transition Metal",4,6,"[Ar]3d5 4s1",1907,2671,7.15,1797,"Chrome plating"],
-  [25,"Mn","Manganese",54.94,"Transition Metal",4,7,"[Ar]3d5 4s2",1246,2061,7.3,1774,"Steel and batteries"],
-  [26,"Fe","Iron",55.85,"Transition Metal",4,8,"[Ar]3d6 4s2",1538,2862,7.87,-1,"Earths core is mostly iron"],
-  [27,"Co","Cobalt",58.93,"Transition Metal",4,9,"[Ar]3d7 4s2",1495,2927,8.86,1735,"Deep blue in glass"],
-  [28,"Ni","Nickel",58.69,"Transition Metal",4,10,"[Ar]3d8 4s2",1455,2913,8.91,1751,"US nickels = 75% copper"],
-  [29,"Cu","Copper",63.55,"Transition Metal",4,11,"[Ar]3d10 4s1",1085,2562,8.96,-1,"First metal used by humans"],
-  [30,"Zn","Zinc",65.38,"Transition Metal",4,12,"[Ar]3d10 4s2",420,907,7.13,1746,"Galvanized steel coating"],
-  [31,"Ga","Gallium",69.72,"Post-Transition",4,13,"[Ar]3d10 4s2 4p1",30,2204,5.91,1875,"Melts in your hand at 30C"],
-  [32,"Ge","Germanium",72.63,"Metalloid",4,14,"[Ar]3d10 4s2 4p2",938,2833,5.32,1886,"Fiber optics"],
-  [33,"As","Arsenic",74.92,"Metalloid",4,15,"[Ar]3d10 4s2 4p3",817,614,5.78,1250,"Historic poison"],
-  [34,"Se","Selenium",78.97,"Nonmetal",4,16,"[Ar]3d10 4s2 4p4",221,685,4.81,1817,"Thyroid function"],
-  [35,"Br","Bromine",79.9,"Halogen",4,17,"[Ar]3d10 4s2 4p5",-7,59,3.12,1826,"Liquid at room temp"],
-  [36,"Kr","Krypton",83.8,"Noble Gas",4,18,"[Ar]3d10 4s2 4p6",-157,-153,3.75,1898,"Supermans planet namesake"],
-  [37,"Rb","Rubidium",85.47,"Alkali Metal",5,1,"[Kr]5s1",39,688,1.53,1861,"Atomic clocks"],
-  [38,"Sr","Strontium",87.62,"Alkaline Earth",5,2,"[Kr]5s2",777,1382,2.64,1790,"Red fireworks"],
-  [39,"Y","Yttrium",88.91,"Transition Metal",5,3,"[Kr]4d1 5s2",1526,3345,4.47,1794,"LED TVs"],
-  [40,"Zr","Zirconium",91.22,"Transition Metal",5,4,"[Kr]4d2 5s2",1855,4409,6.52,1789,"Cubic zirconia fake diamond"],
-  [41,"Nb","Niobium",92.91,"Transition Metal",5,5,"[Kr]4d4 5s1",2477,4744,8.57,1801,"MRI magnets"],
-  [42,"Mo","Molybdenum",95.95,"Transition Metal",5,6,"[Kr]4d5 5s1",2623,4639,10.2,1781,"N-fixing bacteria"],
+  [18,"Ar","Argon",39.948,"Noble Gas",3,18,"[Ne]3s2 3p6",-189,-186,1.78,1894,"~1% of atmosphere"],
+  [19,"K","Potassium",39.098,"Alkali Metal",4,1,"[Ar]4s1",64,759,0.86,1807,"Burns in water with lilac flame!"],
+  [20,"Ca","Calcium",40.078,"Alkaline Earth",4,2,"[Ar]4s2",842,1484,1.55,1808,"Essential for bones and teeth"],
+  [21,"Sc","Scandium",44.956,"Transition Metal",4,3,"[Ar]3d1 4s2",1541,2836,2.99,1879,"Aerospace alloys"],
+  [22,"Ti","Titanium",47.867,"Transition Metal",4,4,"[Ar]3d2 4s2",1668,3287,4.51,1791,"Strong as steel, 45% lighter"],
+  [23,"V","Vanadium",50.942,"Transition Metal",4,5,"[Ar]3d3 4s2",1910,3407,6.0,1801,"Strengthens steel tools"],
+  [24,"Cr","Chromium",51.996,"Transition Metal",4,6,"[Ar]3d5 4s1",1907,2671,7.15,1797,"Shiny corrosion-resistant plating"],
+  [25,"Mn","Manganese",54.938,"Transition Metal",4,7,"[Ar]3d5 4s2",1246,2061,7.3,1774,"Steel and batteries"],
+  [26,"Fe","Iron",55.845,"Transition Metal",4,8,"[Ar]3d6 4s2",1538,2862,7.87,-1,"Earth's core is mostly iron"],
+  [27,"Co","Cobalt",58.933,"Transition Metal",4,9,"[Ar]3d7 4s2",1495,2927,8.86,1735,"Deep blue in stained glass"],
+  [28,"Ni","Nickel",58.693,"Transition Metal",4,10,"[Ar]3d8 4s2",1455,2913,8.91,1751,"US nickels = 75% copper"],
+  [29,"Cu","Copper",63.546,"Transition Metal",4,11,"[Ar]3d10 4s1",1085,2562,8.96,-1,"First metal worked by humans"],
+  [30,"Zn","Zinc",65.38,"Transition Metal",4,12,"[Ar]3d10 4s2",420,907,7.13,1746,"Galvanization prevents rust"],
+  [31,"Ga","Gallium",69.723,"Post-Transition",4,13,"[Ar]3d10 4s2 4p1",30,2204,5.91,1875,"Melts in your hand at 30°C"],
+  [32,"Ge","Germanium",72.63,"Metalloid",4,14,"[Ar]3d10 4s2 4p2",938,2833,5.32,1886,"Essential for fiber optics"],
+  [33,"As","Arsenic",74.922,"Metalloid",4,15,"[Ar]3d10 4s2 4p3",817,614,5.78,1250,"Historic poisonous element"],
+  [34,"Se","Selenium",78.971,"Nonmetal",4,16,"[Ar]3d10 4s2 4p4",221,685,4.81,1817,"Vital for thyroid enzymes"],
+  [35,"Br","Bromine",79.904,"Halogen",4,17,"[Ar]3d10 4s2 4p5",-7,59,3.12,1826,"Dense reddish-brown liquid"],
+  [36,"Kr","Krypton",83.798,"Noble Gas",4,18,"[Ar]3d10 4s2 4p6",-157,-153,3.75,1898,"Named from Greek kryptos (hidden)"],
+  [37,"Rb","Rubidium",85.468,"Alkali Metal",5,1,"[Kr]5s1",39,688,1.53,1861,"High-precision atomic clocks"],
+  [38,"Sr","Strontium",87.62,"Alkaline Earth",5,2,"[Kr]5s2",777,1382,2.64,1790,"Gives fireworks bright red color"],
+  [39,"Y","Yttrium",88.906,"Transition Metal",5,3,"[Kr]4d1 5s2",1526,3345,4.47,1794,"Used in LED phosphor"],
+  [40,"Zr","Zirconium",91.224,"Transition Metal",5,4,"[Kr]4d2 5s2",1855,4409,6.52,1789,"Cubic zirconia diamond simulant"],
+  [41,"Nb","Niobium",92.906,"Transition Metal",5,5,"[Kr]4d4 5s1",2477,4744,8.57,1801,"Superconducting MRI magnets"],
+  [42,"Mo","Molybdenum",95.95,"Transition Metal",5,6,"[Kr]4d5 5s1",2623,4639,10.2,1781,"Essential enzyme cofactor"],
   [43,"Tc","Technetium",98,"Transition Metal",5,7,"[Kr]4d5 5s2",2157,4265,11.0,1937,"First artificial element"],
-  [44,"Ru","Ruthenium",101.1,"Transition Metal",5,8,"[Kr]4d7 5s1",2334,4150,12.1,1844,"Pen nibs"],
-  [45,"Rh","Rhodium",102.9,"Transition Metal",5,9,"[Kr]4d8 5s1",1964,3695,12.4,1803,"Most expensive metal"],
-  [46,"Pd","Palladium",106.4,"Transition Metal",5,10,"[Kr]4d10",1555,2963,12.0,1803,"Absorbs 900x H2"],
-  [47,"Ag","Silver",107.9,"Transition Metal",5,11,"[Kr]4d10 5s1",962,2162,10.5,-1,"Best conductor"],
-  [48,"Cd","Cadmium",112.4,"Transition Metal",5,12,"[Kr]4d10 5s2",321,767,8.69,1817,"NiCd batteries"],
-  [49,"In","Indium",114.8,"Post-Transition",5,13,"[Kr]4d10 5s2 5p1",157,2072,7.31,1863,"Touchscreens (ITO)"],
-  [50,"Sn","Tin",118.7,"Post-Transition",5,14,"[Kr]4d10 5s2 5p2",232,2602,7.27,-1,"Tin cans"],
-  [51,"Sb","Antimony",121.8,"Metalloid",5,15,"[Kr]4d10 5s2 5p3",631,1587,6.68,-1,"Egyptian eye makeup"],
-  [52,"Te","Tellurium",127.6,"Metalloid",5,16,"[Kr]4d10 5s2 5p4",450,988,6.24,1783,"Rarest stable solid"],
-  [53,"I","Iodine",126.9,"Halogen",5,17,"[Kr]4d10 5s2 5p5",114,184,4.93,1811,"Iodized salt"],
-  [54,"Xe","Xenon",131.3,"Noble Gas",5,18,"[Kr]4d10 5s2 5p6",-112,-108,5.89,1898,"Ion propulsion"],
-  [55,"Cs","Caesium",132.9,"Alkali Metal",6,1,"[Xe]6s1",28,671,1.87,1860,"Most reactive metal"],
-  [56,"Ba","Barium",137.3,"Alkaline Earth",6,2,"[Xe]6s2",727,1897,3.62,1808,"X-ray barium meals"],
-  [57,"La","Lanthanum",138.9,"Lanthanide",8,3,"[Xe]5d1 6s2",920,3464,6.15,1839,"Camera lenses"],
-  [58,"Ce","Cerium",140.1,"Lanthanide",8,4,"[Xe]4f1 5d1 6s2",795,3443,6.77,1803,"Catalytic converters"],
-  [59,"Pr","Praseodymium",140.9,"Lanthanide",8,5,"[Xe]4f3 6s2",931,3520,6.77,1885,"Welders goggles"],
-  [60,"Nd","Neodymium",144.2,"Lanthanide",8,6,"[Xe]4f4 6s2",1016,3074,7.01,1885,"Strongest magnets"],
-  [61,"Pm","Promethium",145,"Lanthanide",8,7,"[Xe]4f5 6s2",1042,3000,7.26,1945,"All radioactive"],
-  [62,"Sm","Samarium",150.4,"Lanthanide",8,8,"[Xe]4f6 6s2",1072,1794,7.52,1879,"Heat-resistant magnets"],
-  [63,"Eu","Europium",152,"Lanthanide",8,9,"[Xe]4f7 6s2",822,1529,5.24,1901,"Euro banknotes glow UV"],
-  [64,"Gd","Gadolinium",157.3,"Lanthanide",8,10,"[Xe]4f7 5d1 6s2",1313,3273,7.9,1880,"MRI contrast agent"],
-  [65,"Tb","Terbium",158.9,"Lanthanide",8,11,"[Xe]4f9 6s2",1356,3230,8.23,1843,"Green phosphor"],
-  [66,"Dy","Dysprosium",162.5,"Lanthanide",8,12,"[Xe]4f10 6s2",1412,2567,8.55,1886,"Nuclear control rods"],
-  [67,"Ho","Holmium",164.9,"Lanthanide",8,13,"[Xe]4f11 6s2",1474,2700,8.8,1878,"Strongest magnetic moment"],
-  [68,"Er","Erbium",167.3,"Lanthanide",8,14,"[Xe]4f12 6s2",1529,2868,9.07,1842,"Fiber optic amplifiers"],
-  [69,"Tm","Thulium",168.9,"Lanthanide",8,15,"[Xe]4f13 6s2",1545,1950,9.32,1879,"Rarest lanthanide"],
-  [70,"Yb","Ytterbium",173,"Lanthanide",8,16,"[Xe]4f14 6s2",824,1196,6.9,1878,"Precise atomic clocks"],
-  [71,"Lu","Lutetium",175,"Lanthanide",8,17,"[Xe]4f14 5d1 6s2",1663,3402,9.84,1907,"PET scan detectors"],
-  [72,"Hf","Hafnium",178.5,"Transition Metal",6,4,"[Xe]4f14 5d2 6s2",2233,4603,13.3,1923,"Nuclear sub reactors"],
-  [73,"Ta","Tantalum",180.9,"Transition Metal",6,5,"[Xe]4f14 5d3 6s2",3017,5458,16.4,1802,"Smartphone capacitors"],
-  [74,"W","Tungsten",183.8,"Transition Metal",6,6,"[Xe]4f14 5d4 6s2",3422,5555,19.3,1783,"Highest melting point"],
-  [75,"Re","Rhenium",186.2,"Transition Metal",6,7,"[Xe]4f14 5d5 6s2",3186,5596,20.8,1925,"Last stable discovered"],
-  [76,"Os","Osmium",190.2,"Transition Metal",6,8,"[Xe]4f14 5d6 6s2",3033,5012,22.6,1803,"Densest element"],
-  [77,"Ir","Iridium",192.2,"Transition Metal",6,9,"[Xe]4f14 5d7 6s2",2446,4428,22.4,1803,"Dinosaur asteroid layer"],
-  [78,"Pt","Platinum",195.1,"Transition Metal",6,10,"[Xe]4f14 5d9 6s1",1768,3825,21.5,1735,"Rarer than gold"],
-  [79,"Au","Gold",197,"Transition Metal",6,11,"[Xe]4f14 5d10 6s1",1064,2856,19.3,-1,"From meteorite impacts"],
-  [80,"Hg","Mercury",200.6,"Transition Metal",6,12,"[Xe]4f14 5d10 6s2",-39,357,13.5,-1,"Only liquid metal"],
-  [81,"Tl","Thallium",204.4,"Post-Transition",6,13,"[Xe]6p1",304,1473,11.8,1861,"Extremely toxic"],
-  [82,"Pb","Lead",207.2,"Post-Transition",6,14,"[Xe]6p2",327,1749,11.3,-1,"Plumbing from plumbum"],
-  [83,"Bi","Bismuth",209,"Post-Transition",6,15,"[Xe]6p3",271,1564,9.79,1753,"Rainbow crystals"],
-  [84,"Po","Polonium",209,"Metalloid",6,16,"[Xe]6p4",254,962,9.2,1898,"Named after Poland"],
-  [85,"At","Astatine",210,"Halogen",6,17,"[Xe]6p5",302,337,7.0,1940,"Under 30g on Earth"],
-  [86,"Rn","Radon",222,"Noble Gas",6,18,"[Xe]6p6",-71,-62,9.73,1900,"Radioactive ground gas"],
-  [87,"Fr","Francium",223,"Alkali Metal",7,1,"[Rn]7s1",27,677,1.87,1939,"22-min half-life"],
-  [88,"Ra","Radium",226,"Alkaline Earth",7,2,"[Rn]7s2",700,1737,5.5,1898,"Glows in the dark"],
-  [89,"Ac","Actinium",227,"Actinide",9,3,"[Rn]6d1 7s2",1050,3200,10.1,1899,"Glows blue"],
-  [90,"Th","Thorium",232,"Actinide",9,4,"[Rn]6d2 7s2",1750,4788,11.7,1829,"Future nuclear fuel"],
-  [91,"Pa","Protactinium",231,"Actinide",9,5,"[Rn]5f2 6d1 7s2",1572,4000,15.4,1913,"Rarest element"],
-  [92,"U","Uranium",238,"Actinide",9,6,"[Rn]5f3 6d1 7s2",1135,4131,18.9,1789,"1kg U = 20000kg coal"],
-  [93,"Np","Neptunium",237,"Actinide",9,7,"[Rn]5f4 6d1 7s2",644,3902,20.2,1940,"Named after Neptune"],
-  [94,"Pu","Plutonium",244,"Actinide",9,8,"[Rn]5f6 7s2",640,3228,19.7,1940,"Nuclear weapons"],
-  [95,"Am","Americium",243,"Actinide",9,9,"[Rn]5f7 7s2",1176,2011,12.0,1944,"In smoke detectors"],
-  [96,"Cm","Curium",247,"Actinide",9,10,"[Rn]5f7 6d1 7s2",1345,3110,13.5,1944,"Named after Curies"],
-  [97,"Bk","Berkelium",247,"Actinide",9,11,"[Rn]5f9 7s2",986,2627,14.8,1949,"Berkeley, CA"],
-  [98,"Cf","Californium",251,"Actinide",9,12,"[Rn]5f10 7s2",900,1472,15.1,1950,"Gold ore detection"],
-  [99,"Es","Einsteinium",252,"Actinide",9,13,"[Rn]5f11 7s2",860,996,8.84,1952,"H-bomb debris"],
-  [100,"Fm","Fermium",257,"Actinide",9,14,"[Rn]5f12 7s2",1527,1800,9.7,1952,"Enrico Fermi"],
-  [101,"Md","Mendelevium",258,"Actinide",9,15,"[Rn]5f13 7s2",827,1100,10.3,1955,"Named after Mendeleev"],
-  [102,"No","Nobelium",259,"Actinide",9,16,"[Rn]5f14 7s2",827,1100,9.9,1966,"Alfred Nobel"],
-  [103,"Lr","Lawrencium",266,"Actinide",9,17,"[Rn]5f14 7s2 7p1",1627,3100,14.4,1961,"Cyclotron inventor"],
-  [104,"Rf","Rutherfordium",267,"Transition Metal",7,4,"[Rn]5f14 6d2 7s2",2100,5500,23.2,1964,"Nuclear physics father"],
-  [105,"Db","Dubnium",268,"Transition Metal",7,5,"[Rn]",null,null,29.3,1967,"Dubna, Russia"],
-  [106,"Sg","Seaborgium",269,"Transition Metal",7,6,"[Rn]",null,null,35.0,1974,"Named while alive"],
-  [107,"Bh","Bohrium",270,"Transition Metal",7,7,"[Rn]",null,null,37.1,1981,"Niels Bohr"],
-  [108,"Hs","Hassium",277,"Transition Metal",7,8,"[Rn]",null,null,40.7,1984,"Hesse, Germany"],
-  [109,"Mt","Meitnerium",278,"Transition Metal",7,9,"[Rn]",null,null,37.4,1982,"Lise Meitner"],
-  [110,"Ds","Darmstadtium",281,"Transition Metal",7,10,"[Rn]",null,null,34.8,1994,"Few atoms made"],
-  [111,"Rg","Roentgenium",282,"Transition Metal",7,11,"[Rn]",null,null,28.7,1994,"X-ray discoverer"],
-  [112,"Cn","Copernicium",285,"Transition Metal",7,12,"[Rn]",null,null,14.0,1996,"Maybe liquid metal"],
-  [113,"Nh","Nihonium",286,"Post-Transition",7,13,"[Rn]",null,null,16.0,2003,"First Asian element"],
-  [114,"Fl","Flerovium",289,"Post-Transition",7,14,"[Rn]",null,null,14.0,1998,"May act noble-gas-like"],
-  [115,"Mc","Moscovium",290,"Post-Transition",7,15,"[Rn]",null,null,13.5,2003,"Moscow"],
-  [116,"Lv","Livermorium",293,"Post-Transition",7,16,"[Rn]",null,null,12.9,2000,"Livermore, CA"],
-  [117,"Ts","Tennessine",294,"Halogen",7,17,"[Rn]",null,null,7.2,2010,"Tennessee"],
-  [118,"Og","Oganesson",294,"Noble Gas",7,18,"[Rn]",null,null,5.0,2002,"Heaviest element ever"],
+  [44,"Ru","Ruthenium",101.07,"Transition Metal",5,8,"[Kr]4d7 5s1",2334,4150,12.1,1844,"Fountain pen nib tipping"],
+  [45,"Rh","Rhodium",102.91,"Transition Metal",5,9,"[Kr]4d8 5s1",1964,3695,12.4,1803,"Extremely rare precious metal"],
+  [46,"Pd","Palladium",106.42,"Transition Metal",5,10,"[Kr]4d10",1555,2963,12.0,1803,"Absorbs 900x its volume in H2"],
+  [47,"Ag","Silver",107.87,"Transition Metal",5,11,"[Kr]4d10 5s1",962,2162,10.5,-1,"Highest electrical conductivity"],
+  [48,"Cd","Cadmium",112.41,"Transition Metal",5,12,"[Kr]4d10 5s2",321,767,8.69,1817,"Rechargeable NiCd batteries"],
+  [49,"In","Indium",114.82,"Post-Transition",5,13,"[Kr]4d10 5s2 5p1",157,2072,7.31,1863,"Crucial for touchscreen ITO glass"],
+  [50,"Sn","Tin",118.71,"Post-Transition",5,14,"[Kr]4d10 5s2 5p2",232,2602,7.27,-1,"Bronze Age alloy with copper"],
+  [51,"Sb","Antimony",121.76,"Metalloid",5,15,"[Kr]4d10 5s2 5p3",631,1587,6.68,-1,"Used in ancient Egyptian kohl"],
+  [52,"Te","Tellurium",127.6,"Metalloid",5,16,"[Kr]4d10 5s2 5p4",450,988,6.24,1783,"One of rarest stable solids"],
+  [53,"I","Iodine",126.9,"Halogen",5,17,"[Kr]4d10 5s2 5p5",114,184,4.93,1811,"Turns starch deep midnight blue"],
+  [54,"Xe","Xenon",131.29,"Noble Gas",5,18,"[Kr]4d10 5s2 5p6",-112,-108,5.89,1898,"Used in satellite ion thrusters"],
+  [55,"Cs","Caesium",132.91,"Alkali Metal",6,1,"[Xe]6s1",28,671,1.87,1860,"Defines the official SI second"],
+  [56,"Ba","Barium",137.33,"Alkaline Earth",6,2,"[Xe]6s2",727,1897,3.62,1808,"Barium swallow digestive X-rays"],
+  [57,"La","Lanthanum",138.91,"Lanthanide",8,3,"[Xe]5d1 6s2",920,3464,6.15,1839,"High refractive index camera glass"],
+  [58,"Ce","Cerium",140.12,"Lanthanide",8,4,"[Xe]4f1 5d1 6s2",795,3443,6.77,1803,"Catalytic converter coating"],
+  [59,"Pr","Praseodymium",140.91,"Lanthanide",8,5,"[Xe]4f3 6s2",931,3520,6.77,1885,"Didymium welders protective glass"],
+  [60,"Nd","Neodymium",144.24,"Lanthanide",8,6,"[Xe]4f4 6s2",1016,3074,7.01,1885,"World's strongest permanent magnets"],
+  [61,"Pm","Promethium",145,"Lanthanide",8,7,"[Xe]4f5 6s2",1042,3000,7.26,1945,"Only radioactive rare-earth"],
+  [62,"Sm","Samarium",150.36,"Lanthanide",8,8,"[Xe]4f6 6s2",1072,1794,7.52,1879,"High-temperature magnets"],
+  [63,"Eu","Europium",151.96,"Lanthanide",8,9,"[Xe]4f7 6s2",822,1529,5.24,1901,"Euro banknotes anti-counterfeit glow"],
+  [64,"Gd","Gadolinium",157.25,"Lanthanide",8,10,"[Xe]4f7 5d1 6s2",1313,3273,7.9,1880,"Standard MRI contrast agent"],
+  [65,"Tb","Terbium",158.93,"Lanthanide",8,11,"[Xe]4f9 6s2",1356,3230,8.23,1843,"Vibrant green trichromatic screens"],
+  [66,"Dy","Dysprosium",162.5,"Lanthanide",8,12,"[Xe]4f10 6s2",1412,2567,8.55,1886,"Nuclear reactor control rods"],
+  [67,"Ho","Holmium",164.93,"Lanthanide",8,13,"[Xe]4f11 6s2",1474,2700,8.8,1878,"Highest magnetic strength of elements"],
+  [68,"Er","Erbium",167.26,"Lanthanide",8,14,"[Xe]4f12 6s2",1529,2868,9.07,1842,"Subsea optical cable amplifiers"],
+  [69,"Tm","Thulium",168.93,"Lanthanide",8,15,"[Xe]4f13 6s2",1545,1950,9.32,1879,"Portable field X-ray units"],
+  [70,"Yb","Ytterbium",173.05,"Lanthanide",8,16,"[Xe]4f14 6s2",824,1196,6.9,1878,"Ultra-stable atomic optical clocks"],
+  [71,"Lu","Lutetium",174.97,"Lanthanide",8,17,"[Xe]4f14 5d1 6s2",1663,3402,9.84,1907,"Detectors for cancer PET scans"],
+  [72,"Hf","Hafnium",178.49,"Transition Metal",6,4,"[Xe]4f14 5d2 6s2",2233,4603,13.3,1923,"Nuclear submarine reactors"],
+  [73,"Ta","Tantalum",180.95,"Transition Metal",6,5,"[Xe]4f14 5d3 6s2",3017,5458,16.4,1802,"Miniature smartphone capacitors"],
+  [74,"W","Tungsten",183.84,"Transition Metal",6,6,"[Xe]4f14 5d4 6s2",3422,5555,19.3,1783,"Highest melting point of all metals"],
+  [75,"Re","Rhenium",186.21,"Transition Metal",6,7,"[Xe]4f14 5d5 6s2",3186,5596,20.8,1925,"Jet engine combustion turbines"],
+  [76,"Os","Osmium",190.23,"Transition Metal",6,8,"[Xe]4f14 5d6 6s2",3033,5012,22.59,1803,"Densest natural element on Earth"],
+  [77,"Ir","Iridium",192.22,"Transition Metal",6,9,"[Xe]4f14 5d7 6s2",2446,4428,22.56,1803,"Marks dinosaur impact boundary"],
+  [78,"Pt","Platinum",195.08,"Transition Metal",6,10,"[Xe]4f14 5d9 6s1",1768,3825,21.45,1735,"Crucial automotive catalyst"],
+  [79,"Au","Gold",196.97,"Transition Metal",6,11,"[Xe]4f14 5d10 6s1",1064,2856,19.3,-1,"Formed in colliding neutron stars"],
+  [80,"Hg","Mercury",200.59,"Transition Metal",6,12,"[Xe]4f14 5d10 6s2",-39,357,13.53,-1,"Only liquid metal at room temp"],
+  [81,"Tl","Thallium",204.38,"Post-Transition",6,13,"[Xe]6p1",304,1473,11.85,1861,"Agatha Christie's poisoner poison"],
+  [82,"Pb","Lead",207.2,"Post-Transition",6,14,"[Xe]6p2",327,1749,11.34,-1,"From Latin plumbum (plumbing)"],
+  [83,"Bi","Bismuth",208.98,"Post-Transition",6,15,"[Xe]6p3",271,1564,9.78,1753,"Forms iridescent rainbow crystals"],
+  [84,"Po","Polonium",209,"Metalloid",6,16,"[Xe]6p4",254,962,9.2,1898,"Named after Marie Curie's Poland"],
+  [85,"At","Astatine",210,"Halogen",6,17,"[Xe]6p5",302,337,7.0,1940,"Less than 30 grams in entire Earth crust"],
+  [86,"Rn","Radon",222,"Noble Gas",6,18,"[Xe]6p6",-71,-62,9.73,1900,"Radioactive subterranean gas"],
+  [87,"Fr","Francium",223,"Alkali Metal",7,1,"[Rn]7s1",27,677,1.87,1939,"Half-life is only 22 minutes"],
+  [88,"Ra","Radium",226,"Alkaline Earth",7,2,"[Rn]7s2",700,1737,5.5,1898,"Discovered by Marie & Pierre Curie"],
+  [89,"Ac","Actinium",227,"Actinide",9,3,"[Rn]6d1 7s2",1050,3200,10.07,1899,"Glows with eerie blue light"],
+  [90,"Th","Thorium",232.04,"Actinide",9,4,"[Rn]6d2 7s2",1750,4788,11.72,1829,"Clean alternative nuclear fuel candidate"],
+  [91,"Pa","Protactinium",231.04,"Actinide",9,5,"[Rn]5f2 6d1 7s2",1572,4000,15.37,1913,"Naturally decays to actinium"],
+  [92,"U","Uranium",238.03,"Actinide",9,6,"[Rn]5f3 6d1 7s2",1135,4131,18.95,1789,"1kg U yields 20,000kg coal energy"],
+  [93,"Np","Neptunium",237,"Actinide",9,7,"[Rn]5f4 6d1 7s2",644,3902,20.25,1940,"Named after planet Neptune"],
+  [94,"Pu","Plutonium",244,"Actinide",9,8,"[Rn]5f6 7s2",640,3228,19.84,1940,"Power source for deep space probes"],
+  [95,"Am","Americium",243,"Actinide",9,9,"[Rn]5f7 7s2",1176,2011,12.0,1944,"Found in home smoke detectors"],
+  [96,"Cm","Curium",247,"Actinide",9,10,"[Rn]5f7 6d1 7s2",1345,3110,13.51,1944,"Named in honor of the Curies"],
+  [97,"Bk","Berkelium",247,"Actinide",9,11,"[Rn]5f9 7s2",986,2627,14.78,1949,"Synthesized at UC Berkeley"],
+  [98,"Cf","Californium",251,"Actinide",9,12,"[Rn]5f10 7s2",900,1472,15.1,1950,"Used to detect gold & oil reserves"],
+  [99,"Es","Einsteinium",252,"Actinide",9,13,"[Rn]5f11 7s2",860,996,8.84,1952,"Discovered in first H-bomb debris"],
+  [100,"Fm","Fermium",257,"Actinide",9,14,"[Rn]5f12 7s2",1527,1800,9.7,1952,"Named for nuclear pioneer Enrico Fermi"],
+  [101,"Md","Mendelevium",258,"Actinide",9,15,"[Rn]5f13 7s2",827,1100,10.3,1955,"Honors Periodic Table creator Mendeleev"],
+  [102,"No","Nobelium",259,"Actinide",9,16,"[Rn]5f14 7s2",827,1100,9.9,1966,"Named in honor of Alfred Nobel"],
+  [103,"Lr","Lawrencium",266,"Actinide",9,17,"[Rn]5f14 7s2 7p1",1627,3100,14.4,1961,"Named for cyclotron inventor Lawrence"],
+  [104,"Rf","Rutherfordium",267,"Transition Metal",7,4,"[Rn]5f14 6d2 7s2",2100,5500,23.2,1964,"Father of nuclear physics Ernest Rutherford"],
+  [105,"Db","Dubnium",268,"Transition Metal",7,5,"[Rn]",null,null,29.3,1967,"Created in Dubna nuclear research lab"],
+  [106,"Sg","Seaborgium",269,"Transition Metal",7,6,"[Rn]",null,null,35.0,1974,"Named for Glenn Seaborg while alive"],
+  [107,"Bh","Bohrium",270,"Transition Metal",7,7,"[Rn]",null,null,37.1,1981,"Named after atomic model pioneer Niels Bohr"],
+  [108,"Hs","Hassium",277,"Transition Metal",7,8,"[Rn]",null,null,40.7,1984,"Named for German state of Hesse"],
+  [109,"Mt","Meitnerium",278,"Transition Metal",7,9,"[Rn]",null,null,37.4,1982,"Named after nuclear physicist Lise Meitner"],
+  [110,"Ds","Darmstadtium",281,"Transition Metal",7,10,"[Rn]",null,null,34.8,1994,"Created in Darmstadt, Germany"],
+  [111,"Rg","Roentgenium",282,"Transition Metal",7,11,"[Rn]",null,null,28.7,1994,"Named after X-ray discoverer Roentgen"],
+  [112,"Cn","Copernicium",285,"Transition Metal",7,12,"[Rn]",null,null,14.0,1996,"Named after astronomer Nicolaus Copernicus"],
+  [113,"Nh","Nihonium",286,"Post-Transition",7,13,"[Rn]",null,null,16.0,2003,"First element discovered in Asia (Japan)"],
+  [114,"Fl","Flerovium",289,"Post-Transition",7,14,"[Rn]",null,null,14.0,1998,"Superheavy element near island of stability"],
+  [115,"Mc","Moscovium",290,"Post-Transition",7,15,"[Rn]",null,null,13.5,2003,"Named for Moscow region"],
+  [116,"Lv","Livermorium",293,"Post-Transition",7,16,"[Rn]",null,null,12.9,2000,"Named for Lawrence Livermore National Lab"],
+  [117,"Ts","Tennessine",294,"Halogen",7,17,"[Rn]",null,null,7.2,2010,"Superheavy synthetic halogen"],
+  [118,"Og","Oganesson",294,"Noble Gas",7,18,"[Rn]",null,null,5.0,2002,"Heaviest element on the periodic table"],
 ];
 
-/* Extra properties: [electronegativity (Pauling), atomic radius (pm), 1st ionization energy (kJ/mol)] */
 var PROP_DATA = {
   1:[2.20,25,1312], 2:[null,31,2372],
   3:[0.98,145,520], 4:[1.57,105,899], 5:[2.04,85,801], 6:[2.55,70,1086], 7:[3.04,65,1402], 8:[3.44,60,1314], 9:[3.98,50,1681], 10:[null,38,2081],
@@ -221,7 +249,6 @@ const EL = PE.map(function(e) {
   return { n:e[0], s:e[1], name:e[2], m:e[3], cat:e[4], row:e[5], col:e[6], config:e[7], mp:e[8], bp:e[9], d:e[10], disc:e[11], fact:e[12], en:p[0], ar:p[1], ie:p[2] };
 });
 
-/* ═══ COLOR PROPERTIES (for color-by-property mode + trends) ═══ */
 var COLOR_PROPS = {
   category: { label:"Category" },
   en: { label:"Electronegativity", get:function(e){return e.en}, min:0.7, max:4.0, unit:"" },
@@ -237,12 +264,11 @@ function heatColor(v, min, max) {
   if (v == null || isNaN(v)) return "#3a3a3a";
   var t = (v - min) / (max - min);
   t = Math.max(0, Math.min(1, t));
-  // Cool→warm: blue (240) → cyan → green → yellow → red (0)
   var h = 240 * (1 - t);
   return "hsl(" + h + ",75%,50%)";
 }
 
-/* ═══ LAB DATA ═══ */
+/* ═══ LAB ITEMS (32 items) ═══ */
 const ITEMS = [
   { id:"hcl",name:"HCl",label:"Hydrochloric Acid",color:"#ff5252",icon:"\u{1F9EA}",tag:"Acid" },
   { id:"h2so4",name:"H\u2082SO\u2084",label:"Sulfuric Acid",color:"#ff1744",icon:"\u2697\uFE0F",tag:"Acid" },
@@ -251,27 +277,36 @@ const ITEMS = [
   { id:"naoh",name:"NaOH",label:"Sodium Hydroxide",color:"#448aff",icon:"\u{1F9EB}",tag:"Base" },
   { id:"baking_soda",name:"NaHCO\u2083",label:"Baking Soda",color:"#e0e0e0",icon:"\u{1F9C2}",tag:"Base" },
   { id:"ca_oh_2",name:"Ca(OH)\u2082",label:"Lime Water",color:"#b0bec5",icon:"\u{1F95B}",tag:"Base" },
+  { id:"nh3",name:"NH\u2083",label:"Ammonia Solution",color:"#80d8ff",icon:"\u{1F4A8}",tag:"Base" },
   { id:"nh4cl",name:"NH\u2084Cl",label:"Ammonium Chloride",color:"#4dd0e1",icon:"\u2744\uFE0F",tag:"Salt" },
+  { id:"nacl",name:"NaCl",label:"Table Salt",color:"#fafafa",icon:"\u{1F9CA}",tag:"Salt" },
+  { id:"ki",name:"KI",label:"Potassium Iodide",color:"#fff59d",icon:"\u{1F9C2}",tag:"Salt" },
+  { id:"pb_no3_2",name:"Pb(NO\u2083)\u2082",label:"Lead Nitrate",color:"#cfd8dc",icon:"\u{1F9EA}",tag:"Salt" },
+  { id:"cuso4",name:"CuSO\u2084",label:"Copper Sulfate",color:"#2196f3",icon:"\u{1F48E}",tag:"Salt" },
+  { id:"agno3",name:"AgNO\u2083",label:"Silver Nitrate",color:"#78909c",icon:"\u{1F4BF}",tag:"Salt" },
+  { id:"kmno4",name:"KMnO\u2084",label:"Potassium Permanganate",color:"#9c27b0",icon:"\u{1F7E3}",tag:"Salt" },
+  { id:"caco3",name:"CaCO\u2083",label:"Limestone / Chalk",color:"#eceff1",icon:"\u{1FAA8}",tag:"Salt" },
   { id:"na",name:"Na",label:"Sodium Metal",color:"#bdbdbd",icon:"\u{1FAA8}",tag:"Metal" },
+  { id:"k",name:"K",label:"Potassium Metal",color:"#b388ff",icon:"\u26A1",tag:"Metal" },
   { id:"fe",name:"Fe",label:"Iron Nail",color:"#8d6e63",icon:"\u{1F529}",tag:"Metal" },
   { id:"zn",name:"Zn",label:"Zinc",color:"#90a4ae",icon:"\u2699\uFE0F",tag:"Metal" },
   { id:"mg",name:"Mg",label:"Magnesium",color:"#cfd8dc",icon:"\u{1FA84}",tag:"Metal" },
   { id:"cu",name:"Cu",label:"Copper Wire",color:"#ef6c00",icon:"\u{1F50C}",tag:"Metal" },
-  { id:"cuso4",name:"CuSO\u2084",label:"Copper Sulfate",color:"#2196f3",icon:"\u{1F48E}",tag:"Salt" },
-  { id:"agno3",name:"AgNO\u2083",label:"Silver Nitrate",color:"#78909c",icon:"\u{1F4BF}",tag:"Salt" },
-  { id:"nacl",name:"NaCl",label:"Table Salt",color:"#fafafa",icon:"\u{1F9CA}",tag:"Salt" },
-  { id:"kmno4",name:"KMnO\u2084",label:"Potassium Permanganate",color:"#9c27b0",icon:"\u{1F7E3}",tag:"Salt" },
+  { id:"c",name:"C",label:"Charcoal / Carbon",color:"#616161",icon:"\u2B1B",tag:"Other" },
+  { id:"s",name:"S",label:"Sulfur Powder",color:"#ffd600",icon:"\u{1F7E1}",tag:"Other" },
   { id:"h2o",name:"H\u2082O",label:"Water",color:"#40c4ff",icon:"\u{1F4A7}",tag:"Solvent" },
-  { id:"co2",name:"CO\u2082",label:"Carbon Dioxide",color:"#90a4ae",icon:"\u{1F4A8}",tag:"Gas" },
+  { id:"co2",name:"CO\u2082",label:"Carbon Dioxide",color:"#90a4ae",icon:"\u{1F4AD}",tag:"Gas" },
   { id:"o2",name:"O\u2082",label:"Oxygen",color:"#69f0ae",icon:"\u{1FAC1}",tag:"Gas" },
   { id:"phenol",name:"Phenolphthalein",label:"Indicator",color:"#ea80fc",icon:"\u{1FA77}",tag:"Indicator" },
   { id:"litmus",name:"Litmus",label:"Litmus Paper",color:"#ce93d8",icon:"\u{1F4C4}",tag:"Indicator" },
+  { id:"starch",name:"Starch",label:"Starch Solution",color:"#e1bee7",icon:"\u{1F33E}",tag:"Indicator" },
   { id:"h2o2",name:"H\u2082O\u2082",label:"Hydrogen Peroxide",color:"#80deea",icon:"\u{1FAE7}",tag:"Other" },
-  { id:"mno2",name:"MnO\u2082",label:"Manganese Dioxide",color:"#616161",icon:"\u2B1B",tag:"Other" },
+  { id:"mno2",name:"MnO\u2082",label:"Manganese Dioxide",color:"#424242",icon:"\u2B1B",tag:"Other" },
 ];
 
 const LTAGS = ["All","Acid","Base","Metal","Salt","Solvent","Gas","Indicator","Other"];
 
+/* ═══ EXPANDED CHEMICAL REACTIONS (44 reactions) ═══ */
 const RXN = [
   { r:["hcl","naoh"],name:"Acid-Base Neutralization",eq:"HCl + NaOH -> NaCl + H2O",type:"neutralization",anim:"fizz",color:"#80deea",explain:"H+ meets OH- forming water + salt.",fact:"Antacids neutralize stomach HCl.",score:95,pH:7,temp:"exo",speed:"fast",safety:"Corrosive chemicals." },
   { r:["h2so4","naoh"],name:"H2SO4 + NaOH",eq:"H2SO4 + 2NaOH -> Na2SO4 + 2H2O",type:"neutralization",anim:"fizz",color:"#64b5f6",explain:"Diprotic acid needs 2 NaOH.",fact:"200M+ tonnes H2SO4 produced yearly!",score:92,pH:7,temp:"exo",speed:"fast",safety:"Causes severe burns." },
@@ -281,28 +316,42 @@ const RXN = [
   { r:["vinegar","baking_soda"],name:"Volcano Reaction!",eq:"CH3COOH + NaHCO3 -> CH3COONa + H2O + CO2",type:"gas_evolution",anim:"explode",color:"#fff59d",explain:"Classic CO2 eruption!",fact:"Baking powder makes cakes rise this way!",score:100,pH:5.5,temp:"endo",speed:"fast",safety:"Safe for beginners!" },
   { r:["hcl","baking_soda"],name:"HCl + Baking Soda",eq:"HCl + NaHCO3 -> NaCl + H2O + CO2",type:"gas_evolution",anim:"explode",color:"#ffcc80",explain:"Stronger acid = more vigorous fizz.",fact:"Fire extinguishers use this reaction.",score:90,pH:4,temp:"exo",speed:"fast",safety:"HCl fumes irritating." },
   { r:["na","h2o"],name:"Sodium + Water BOOM",eq:"2Na + 2H2O -> 2NaOH + H2 + fire",type:"violent",anim:"explode",color:"#ff9100",explain:"Sodium explodes in water!",fact:"Cesium is even more violent!",score:92,pH:14,temp:"exo",speed:"instant",safety:"EXPLOSION RISK! Teacher demo only!" },
+  { r:["k","h2o"],name:"Potassium Lilac Explosion!",eq:"2K + 2H2O -> 2KOH + H2 + lilac fire",type:"violent",anim:"explode",color:"#d500f9",score:97,pH:14,temp:"exo",speed:"instant",explain:"Potassium reacts with explosive violence, igniting hydrogen with its signature purple flame!",fact:"Potassium burns hotter and faster than sodium!",safety:"EXTREME EXPLOSION RISK!" },
   { r:["mg","h2o"],name:"Mg + Water",eq:"Mg + 2H2O -> Mg(OH)2 + H2",type:"gas_evolution",anim:"fizz",color:"#b0bec5",explain:"Slow in cold water. Makes milk of magnesia.",fact:"Mg + steam = blinding flame!",score:78,pH:10,temp:"exo",speed:"slow",safety:"Safe with cold water." },
   { r:["hcl","zn"],name:"Zinc + HCl",eq:"Zn + 2HCl -> ZnCl2 + H2",type:"gas_evolution",anim:"fizz",color:"#b0bec5",explain:"Classic H2 gas collection.",fact:"Zinc galvanization prevents rust.",score:88,pH:5,temp:"exo",speed:"medium",safety:"H2 is flammable!" },
-  { r:["hcl","mg"],name:"Mg + HCl Fast!",eq:"Mg + 2HCl -> MgCl2 + H2",type:"gas_evolution",anim:"explode",color:"#e0e0e0",explain:"Very fast and exothermic!",fact:"Old camera flash = burning Mg!",score:93,pH:5,temp:"exo",speed:"fast",safety:"Dont lean over the beaker!" },
+  { r:["hcl","mg"],name:"Mg + HCl Fast!",eq:"Mg + 2HCl -> MgCl2 + H2",type:"gas_evolution",anim:"explode",color:"#e0e0e0",explain:"Very fast and exothermic!",fact:"Old camera flash = burning Mg!",score:93,pH:5,temp:"exo",speed:"fast",safety:"Don't lean over the beaker!" },
   { r:["hcl","fe"],name:"Iron + HCl",eq:"Fe + 2HCl -> FeCl2 + H2",type:"gas_evolution",anim:"fizz",color:"#a5d6a7",explain:"Slow reaction. Pale green solution.",fact:"FeCl2 turns brown in air.",score:82,pH:5,temp:"exo",speed:"slow",safety:"Safe but slow." },
   { r:["hcl","na"],name:"HCl + Sodium",eq:"2HCl + 2Na -> 2NaCl + H2",type:"violent",anim:"explode",color:"#ffcc02",explain:"Extremely vigorous reaction!",fact:"Pop test confirms H2 gas.",score:90,pH:7,temp:"exo",speed:"instant",safety:"DANGEROUS! Teacher only!" },
-  { r:["h2so4","zn"],name:"Zn + H2SO4",eq:"Zn + H2SO4 -> ZnSO4 + H2",type:"gas_evolution",anim:"fizz",color:"#90caf9",explain:"Zinc + dilute sulfuric acid.",fact:"10C rise doubles reaction rate!",score:85,pH:5,temp:"exo",speed:"medium",safety:"Dilute acid only." },
+  { r:["h2so4","zn"],name:"Zn + H2SO4",eq:"Zn + H2SO4 -> ZnSO4 + H2",type:"gas_evolution",anim:"fizz",color:"#90caf9",explain:"Zinc + dilute sulfuric acid.",fact:"10°C rise doubles reaction rate!",score:85,pH:5,temp:"exo",speed:"medium",safety:"Dilute acid only." },
   { r:["h2so4","mg"],name:"Mg + H2SO4",eq:"Mg + H2SO4 -> MgSO4 + H2",type:"gas_evolution",anim:"explode",color:"#f5f5f5",explain:"Makes Epsom salt (MgSO4)!",fact:"Epsom bath salts = MgSO4!",score:90,pH:6,temp:"exo",speed:"fast",safety:"Gets hot!" },
   { r:["cuso4","fe"],name:"Fe Displaces Cu",eq:"CuSO4 + Fe -> FeSO4 + Cu",type:"displacement",anim:"fizz",color:"#ef6c00",explain:"Blue to green. Copper coats nail.",fact:"Historical copper extraction.",score:88,pH:4,temp:"exo",speed:"slow",safety:"CuSO4 is toxic." },
-  { r:["cuso4","zn"],name:"Zn Displaces Cu",eq:"CuSO4 + Zn -> ZnSO4 + Cu",type:"displacement",anim:"fizz",color:"#e65100",explain:"Blue to colorless. Cu deposits.",fact:"K Na Mg Zn Fe Cu Ag Au reactivity.",score:90,pH:4,temp:"exo",speed:"medium",safety:"Handle carefully." },
+  { r:["cuso4","zn"],name:"Zn Displaces Cu",eq:"CuSO4 + Zn -> ZnSO4 + Cu",type:"displacement",anim:"fizz",color:"#e65100",explain:"Blue to colorless. Cu deposits.",fact:"Reactivity series: Zn > Fe > Cu.",score:90,pH:4,temp:"exo",speed:"medium",safety:"Handle carefully." },
   { r:["cuso4","mg"],name:"Mg Displaces Cu!",eq:"CuSO4 + Mg -> MgSO4 + Cu",type:"displacement",anim:"explode",color:"#ff6e40",explain:"Big reactivity gap = vigorous!",fact:"Bigger gap = more violent!",score:95,pH:5,temp:"exo",speed:"fast",safety:"Very exothermic!" },
   { r:["agno3","fe"],name:"Fe Displaces Ag",eq:"2AgNO3 + Fe -> Fe(NO3)2 + 2Ag",type:"displacement",anim:"fizz",color:"#9e9e9e",explain:"Silver tree grows on nail!",fact:"AgNO3 stains skin black!",score:87,pH:5,temp:"exo",speed:"slow",safety:"AgNO3 stains permanently!" },
-  { r:["cuso4","naoh"],name:"Blue Precipitate!",eq:"CuSO4 + 2NaOH -> Cu(OH)2 + Na2SO4",type:"precipitation",anim:"fizz",color:"#26c6da",explain:"Beautiful blue jelly precipitate.",fact:"Used as fungicide since 1885!",score:85,pH:10,temp:"neutral",speed:"instant",safety:"Cu compounds toxic." },
-  { r:["agno3","nacl"],name:"White Precipitate",eq:"AgNO3 + NaCl -> AgCl + NaNO3",type:"precipitation",anim:"fizz",color:"#fafafa",explain:"Classic test for chloride ions.",fact:"AgCl turns purple in sunlight!",score:88,pH:7,temp:"neutral",speed:"instant",safety:"AgNO3 corrosive." },
-  { r:["co2","ca_oh_2"],name:"Lime Water + CO2",eq:"CO2 + Ca(OH)2 -> CaCO3 + H2O",type:"precipitation",anim:"fizz",color:"#e0e0e0",explain:"Milky white confirms CO2!",fact:"Excess CO2 turns it clear again!",score:94,pH:8,temp:"neutral",speed:"medium",safety:"Safe experiment." },
-  { r:["naoh","phenol"],name:"Base turns Pink!",eq:"Phenolphthalein turns PINK in base",type:"indicator",anim:"fizz",color:"#ff1493",explain:"Structure change makes it pink!",fact:"Was used as laxative until 1999!",score:82,pH:13,temp:"neutral",speed:"instant",safety:"Safe." },
-  { r:["hcl","phenol"],name:"Acid + Indicator",eq:"Phenolphthalein stays COLORLESS",type:"indicator",anim:"fizz",color:"#ffebee",explain:"Needs pH above 8.2 for pink.",fact:"Universal indicator shows a rainbow!",score:75,pH:1,temp:"neutral",speed:"instant",safety:"Safe." },
-  { r:["hcl","litmus"],name:"Acid turns Red",eq:"Litmus turns RED in acid",type:"indicator",anim:"fizz",color:"#ef5350",explain:"Medieval chemistry test!",fact:"Litmus test = any simple test.",score:78,pH:1,temp:"neutral",speed:"instant",safety:"Safe." },
-  { r:["naoh","litmus"],name:"Base turns Blue",eq:"Litmus turns BLUE in base",type:"indicator",anim:"fizz",color:"#2979ff",explain:"Red litmus tests for base.",fact:"Litmus comes from lichen.",score:78,pH:13,temp:"neutral",speed:"instant",safety:"Safe." },
-  { r:["h2o2","mno2"],name:"Elephant Toothpaste!",eq:"2H2O2 -[MnO2]-> 2H2O + O2",type:"catalysis",anim:"explode",color:"#80deea",explain:"MnO2 catalyst releases O2 gas!",fact:"Add soap for giant foam eruption!",score:96,pH:7,temp:"exo",speed:"fast",safety:"Dilute H2O2 only!" },
-  { r:["kmno4","h2o"],name:"Purple Dissolution",eq:"KMnO4 dissolves to purple ions",type:"dissolving",anim:"fizz",color:"#9c27b0",explain:"Intense purple from tiny amounts.",fact:"Kills bacteria on contact.",score:80,pH:7,temp:"neutral",speed:"medium",safety:"Stains everything!" },
-  { r:["mg","o2"],name:"Mg Burns!",eq:"2Mg + O2 -> 2MgO + white light",type:"combustion",anim:"explode",color:"#ffffff",explain:"Blinding white flame!",fact:"Never look directly at burning Mg!",score:94,pH:null,temp:"exo",speed:"instant",safety:"BLINDING! Use tinted goggles!" },
-  { r:["nh4cl","ca_oh_2"],name:"Endothermic Ice Cold!",eq:"2NH4Cl + Ca(OH)2 -> CaCl2 + 2NH3 + 2H2O",type:"endothermic",anim:"fizz",color:"#80cbc4",explain:"Gets ICE COLD! Ammonia released.",fact:"Cold packs use similar reactions!",score:91,pH:11,temp:"endo",speed:"medium",safety:"NH3 is pungent. Ventilate!" },
+  { r:["cu","agno3"],name:"Silver Tree (Cu + AgNO3)",eq:"Cu + 2AgNO3 -> Cu(NO3)2 + 2Ag",type:"displacement",anim:"fizz",color:"#29b6f6",score:94,pH:5,temp:"exo",speed:"slow",explain:"Glittering silver crystals grow on copper wire while solution turns royal blue!",fact:"Called Diana's Tree by ancient alchemists.",safety:"Silver nitrate stains skin." },
+  { r:["cu","hno3"],name:"Toxic Brown NO2 Gas!",eq:"Cu + 4HNO3 -> Cu(NO3)2 + 2NO2 + 2H2O",type:"gas_evolution",anim:"explode",color:"#e65100",score:95,pH:1,temp:"exo",speed:"fast",explain:"Copper dissolves in HNO3 emitting choking red-brown nitrogen dioxide gas!",fact:"NO2 is a major cause of urban photochemical smog.",safety:"CHOKING TOXIC FUMES! Fume hood required." },
+  { r:["caco3","hcl"],name:"Limestone Fizz",eq:"CaCO3 + 2HCl -> CaCl2 + H2O + CO2",type:"gas_evolution",anim:"fizz",color:"#cfd8dc",score:90,pH:4,temp:"exo",speed:"fast",explain:"Acid rapidly dissolves calcium carbonate creating lively effervescence of CO2 bubbles.",fact:"Acid rain erodes historic marble statues through this exact reaction.",safety:"Eye protection." },
+  { r:["caco3","vinegar"],name:"Chalk & Vinegar",eq:"CaCO3 + 2CH3COOH -> (CH3COO)2Ca + H2O + CO2",type:"gas_evolution",anim:"fizz",color:"#e0e0e0",score:84,pH:5,temp:"endo",speed:"medium",explain:"Weak acetic acid slowly breaks down eggshells and chalk producing carbon dioxide.",fact:"Soaking an egg in vinegar makes a translucent bouncy naked egg!",safety:"Safe home science." },
+  { r:["ki","pb_no3_2"],name:"Golden Rain (Lead Iodide)!",eq:"Pb(NO3)2 + 2KI -> PbI2 + 2KNO3",type:"precipitation",anim:"fizz",color:"#ffd600",score:98,pH:6,temp:"neutral",speed:"instant",explain:"Dazzling golden-yellow precipitate of lead iodide forms instantaneously!",fact:"Cooling hot saturated PbI2 produces glittering golden hexagonal crystal flakes!",safety:"Lead compounds are toxic. Do not ingest." },
+  { r:["hcl","nh3"],name:"Dense White Smoke (NH4Cl)",eq:"NH3 + HCl -> NH4Cl (dense white smoke)",type:"gas_evolution",anim:"fizz",color:"#f5f5f5",score:95,pH:5,temp:"exo",speed:"instant",explain:"Vapors of ammonia and hydrochloric acid collide in air to form dense white smoke of micro-salt crystals!",fact:"Frequently used in theatrical smoke and military smoke screens.",safety:"Pungent choking fumes." },
+  { r:["fe","s"],needsHeat:true,name:"Iron Sulfide Synthesis",eq:"Fe + S -[heat]-> FeS",type:"synthesis",anim:"explode",color:"#ffab00",score:92,pH:7,temp:"exo",speed:"fast",explain:"Strong heating causes iron and sulfur to glow red hot, forming black non-magnetic Iron(II) sulfide!",fact:"Classic demo illustrating the difference between a mixture and a chemical compound.",safety:"Glows red hot. Ventilate sulfur fumes." },
+  { r:["cu","s"],needsHeat:true,name:"Copper Sulfide Synthesis",eq:"2Cu + S -[heat]-> Cu2S",type:"synthesis",anim:"fizz",color:"#37474f",score:86,pH:7,temp:"exo",speed:"medium",explain:"Red-hot copper combines with sulfur vapor creating black copper(I) sulfide.",fact:"Known as chalcocite, an important copper ore.",safety:"Burner required." },
+  { r:["c","o2"],needsHeat:true,name:"Charcoal Combustion",eq:"C + O2 -[heat]-> CO2 + heat",type:"combustion",anim:"explode",color:"#ff6f00",score:88,pH:null,temp:"exo",speed:"fast",explain:"Charcoal glowing red hot flares into a brilliant orange-white flame in pure oxygen.",fact:"Pure oxygen speeds up charcoal burning over 5x faster than in air.",safety:"High temperature fire." },
+  { r:["s","o2"],needsHeat:true,name:"Sulfur Blue Flame",eq:"S + O2 -[heat]-> SO2 + blue flame",type:"combustion",anim:"fizz",color:"#2979ff",score:91,pH:null,temp:"exo",speed:"fast",explain:"Sulfur melts and burns in oxygen with an ethereal sapphire-blue flame forming sulfur dioxide.",fact:"Referred to as 'burning brimstone' in historical texts.",safety:"SO2 gas is suffocating and irritating." },
+  { r:["cu","o2"],needsHeat:true,name:"Copper Black Oxidation",eq:"2Cu + O2 -[heat]-> 2CuO",type:"combustion",anim:"fizz",color:"#212121",score:83,pH:null,temp:"exo",speed:"slow",explain:"Heating shiny copper wire in oxygen forms a velvety black crust of copper(II) oxide.",fact:"CuO is used as a p-type semiconductor and ceramic glaze.",safety:"Hot wire." },
+  { r:["cuso4","naoh"],name:"Blue Jelly Precipitate!",eq:"CuSO4 + 2NaOH -> Cu(OH)2 + Na2SO4",type:"precipitation",anim:"fizz",color:"#26c6da",explain:"Beautiful light blue jelly precipitate.",fact:"Used as Bordeaux mixture fungicide since 1885!",score:85,pH:10,temp:"neutral",speed:"instant",safety:"Cu compounds toxic." },
+  { r:["agno3","nacl"],name:"White Curdy Precipitate",eq:"AgNO3 + NaCl -> AgCl + NaNO3",type:"precipitation",anim:"fizz",color:"#fafafa",explain:"Classic analytical test for chloride ions.",fact:"AgCl turns purple in sunlight due to metallic silver formation!",score:88,pH:7,temp:"neutral",speed:"instant",safety:"AgNO3 corrosive." },
+  { r:["ki","agno3"],name:"Pale Yellow Silver Iodide",eq:"AgNO3 + KI -> AgI + KNO3",type:"precipitation",anim:"fizz",color:"#fff176",score:87,pH:7,temp:"neutral",speed:"instant",explain:"Immediate formation of pale-yellow silver iodide precipitate.",fact:"Silver iodide crystals are seeded into clouds to induce artificial rainfall!",safety:"Stains skin." },
+  { r:["co2","ca_oh_2"],name:"Lime Water CO2 Test",eq:"CO2 + Ca(OH)2 -> CaCO3 + H2O",type:"precipitation",anim:"fizz",color:"#e0e0e0",explain:"Milky white cloudiness proves carbon dioxide!",fact:"Excess CO2 dissolves the cloudiness forming clear calcium bicarbonate.",score:94,pH:8,temp:"neutral",speed:"medium",safety:"Safe experiment." },
+  { r:["naoh","phenol"],name:"Base Turns Pink!",eq:"Phenolphthalein turns PINK in base",type:"indicator",anim:"fizz",color:"#ff1493",explain:"Deprotonation alters electronic conjugation making it magenta pink!",fact:"Used as disappearing ink with volatile ammonia.",score:82,pH:13,temp:"neutral",speed:"instant",safety:"Safe." },
+  { r:["nh3","phenol"],name:"Ammonia Turns Pink",eq:"NH3 + Phenolphthalein -> Vivid Pink",type:"indicator",anim:"fizz",color:"#f50057",score:83,pH:11,temp:"neutral",speed:"instant",explain:"Ammonium hydroxide solution turns indicator bright fuchsia pink.",fact:"Fades back to colorless as ammonia evaporates into air!",safety:"Pungent smell." },
+  { r:["hcl","phenol"],name:"Acid + Indicator",eq:"Phenolphthalein stays COLORLESS",type:"indicator",anim:"fizz",color:"#ffebee",explain:"Remains colorless in acidic solutions below pH 8.2.",fact:"Universal indicator shows a continuous rainbow spectrum.",score:75,pH:1,temp:"neutral",speed:"instant",safety:"Safe." },
+  { r:["hcl","litmus"],name:"Acid Turns Red",eq:"Litmus turns RED in acid",type:"indicator",anim:"fizz",color:"#ef5350",explain:"Historic chemical test used since Middle Ages!",fact:"The phrase 'litmus test' comes directly from this chemical reaction.",score:78,pH:1,temp:"neutral",speed:"instant",safety:"Safe." },
+  { r:["naoh","litmus"],name:"Base Turns Blue",eq:"Litmus turns BLUE in base",type:"indicator",anim:"fizz",color:"#2979ff",explain:"Red litmus turns blue in alkaline solution.",fact:"Natural litmus dye is extracted from Roccella tinctoria lichens.",score:78,pH:13,temp:"neutral",speed:"instant",safety:"Safe." },
+  { r:["h2o2","mno2"],name:"Elephant Toothpaste!",eq:"2H2O2 -[MnO2]-> 2H2O + O2",type:"catalysis",anim:"explode",color:"#80deea",explain:"MnO2 catalyst vigorously releases oxygen gas foam!",fact:"In rocket engines, concentrated peroxide decomposes this way for thrust!",score:96,pH:7,temp:"exo",speed:"fast",safety:"Dilute H2O2 only!" },
+  { r:["kmno4","h2o"],name:"Purple Dissolution",eq:"KMnO4 dissolves to purple ions",type:"dissolving",anim:"fizz",color:"#9c27b0",explain:"Intense purple color from permanganate ions.",fact:"Dilute solution was used historically to disinfect wounds and purify well water.",score:80,pH:7,temp:"neutral",speed:"medium",safety:"Stains skin and glassware." },
+  { r:["mg","o2"],needsHeat:true,name:"Mg Ribbon Burning!",eq:"2Mg + O2 -[heat]-> 2MgO + intense white light",type:"combustion",anim:"explode",color:"#ffffff",explain:"Blinding white flash produces fluffy white magnesium oxide powder!",fact:"Old camera photoflashes and naval distress flares used burning magnesium.",score:94,pH:null,temp:"exo",speed:"instant",safety:"BLINDING! Never look directly at the flame." },
+  { r:["nh4cl","ca_oh_2"],name:"Endothermic Ice Cold!",eq:"2NH4Cl + Ca(OH)2 -> CaCl2 + 2NH3 + 2H2O",type:"endothermic",anim:"fizz",color:"#80cbc4",explain:"Temperature plunges below freezing while ammonia is released!",fact:"Commercial instant ice packs for athletes rely on endothermic dissolution.",score:91,pH:11,temp:"endo",speed:"medium",safety:"NH3 is pungent. Ventilate room!" },
 ];
 
 const ACHIEVEMENTS = [
@@ -310,13 +359,16 @@ const ACHIEVEMENTS = [
   { id:"five",icon:"\u2B50",title:"Getting Started",desc:"Discover 5 reactions",check:function(l){return l.length>=5} },
   { id:"ten",icon:"\u{1F31F}",title:"Lab Regular",desc:"Discover 10 reactions",check:function(l){return l.length>=10} },
   { id:"twenty",icon:"\u{1F4AB}",title:"Chemistry Whiz",desc:"Discover 20 reactions",check:function(l){return l.length>=20} },
-  { id:"all",icon:"\u{1F451}",title:"Grand Master",desc:"All 30 reactions!",check:function(l){return l.length>=30} },
+  { id:"thirty",icon:"\u{1F9D1}\u200D\u{1F52C}",title:"Senior Chemist",desc:"Discover 30 reactions",check:function(l){return l.length>=30} },
+  { id:"all",icon:"\u{1F451}",title:"Grand Master",desc:"All 44 reactions!",check:function(l){return l.length>=44} },
   { id:"boom",icon:"\u{1F4A5}",title:"First Explosion",desc:"Trigger explosive reaction",check:function(l){return l.some(function(k){var r=RXN.find(function(x){return x.r.slice().sort().join("+")===k});return r&&r.anim==="explode"})} },
+  { id:"golden",icon:"\u{1F308}",title:"Golden Rain",desc:"Discover Lead Iodide precipitate",check:function(l){return l.indexOf("ki+pb_no3_2")!==-1||l.indexOf("pb_no3_2+ki")!==-1} },
+  { id:"smoke",icon:"\u{1F4A8}",title:"Smoke Alchemist",desc:"Synthesize NH4Cl dense smoke",check:function(l){return l.indexOf("hcl+nh3")!==-1||l.indexOf("nh3+hcl")!==-1} },
+  { id:"burner_master",icon:"\u{1F525}",title:"Pyromaniac",desc:"Trigger a heated reaction",check:function(l){return l.some(function(k){var r=RXN.find(function(x){return x.r.slice().sort().join("+")===k});return r&&r.needsHeat})} },
   { id:"indicator_all",icon:"\u{1FA77}",title:"Color Expert",desc:"All 4 indicator reactions",check:function(l){return["hcl+phenol","naoh+phenol","hcl+litmus","naoh+litmus"].every(function(i){return l.indexOf(i)!==-1})} },
-  { id:"displace_all",icon:"\u2694\uFE0F",title:"Displacement Master",desc:"All 4 displacements",check:function(l){return["cuso4+fe","cuso4+mg","cuso4+zn","agno3+fe"].every(function(i){return l.indexOf(i)!==-1})} },
-  { id:"perfect",icon:"\u{1F4AF}",title:"Perfect Score",desc:"100-score reaction",check:function(l){return l.some(function(k){var r=RXN.find(function(x){return x.r.slice().sort().join("+")===k});return r&&r.score===100})} },
+  { id:"displace_all",icon:"\u2694\uFE0F",title:"Displacement Master",desc:"3 displacement reactions",check:function(l){return["cuso4+fe","cuso4+zn","agno3+fe"].every(function(i){return l.indexOf(i)!==-1})} },
+  { id:"perfect",icon:"\u{1F4AF}",title:"Perfect Score",desc:"100-score volcano reaction",check:function(l){return l.indexOf("baking_soda+vinegar")!==-1||l.indexOf("vinegar+baking_soda")!==-1} },
   { id:"cold",icon:"\u{1F976}",title:"Ice Cold!",desc:"Endothermic reaction",check:function(l){return l.indexOf("ca_oh_2+nh4cl")!==-1} },
-  { id:"fire",icon:"\u{1F525}",title:"Pyromaniac",desc:"Burn something!",check:function(l){return l.indexOf("mg+o2")!==-1} },
 ];
 
 const CHALLENGES = [
@@ -324,14 +376,17 @@ const CHALLENGES = [
   { id:"c2",text:"White precipitate",target:"agno3+nacl" },
   { id:"c3",text:"Endothermic reaction",target:"ca_oh_2+nh4cl" },
   { id:"c4",text:"Turn indicator PINK",target:"naoh+phenol" },
-  { id:"c5",text:"Displace copper",target:"cuso4+fe" },
-  { id:"c6",text:"Burn metal in O2",target:"mg+o2" },
-  { id:"c7",text:"Elephant toothpaste",target:"h2o2+mno2" },
-  { id:"c8",text:"Lime water CO2 test",target:"ca_oh_2+co2" },
+  { id:"c5",text:"Displace copper with iron",target:"cuso4+fe" },
+  { id:"c6",text:"Elephant toothpaste",target:"h2o2+mno2" },
+  { id:"c7",text:"Lime water CO2 test",target:"ca_oh_2+co2" },
+  { id:"c8",text:"Golden Rain precipitate",target:"ki+pb_no3_2" },
+  { id:"c9",text:"Dense white smoke",target:"hcl+nh3" },
+  { id:"c10",text:"Synthesize Iron Sulfide (Heat)",target:"fe+s" },
+  { id:"c11",text:"Silver Crystal Tree",target:"cu+agno3" },
+  { id:"c12",text:"Potassium Violet Explosion",target:"k+h2o" },
 ];
 
-/* ═══ SOUND ═══ */
-/* Shared audio context (created lazily, resumed on demand) */
+/* ═══ SOUND SYNTHESIS ═══ */
 var _audioCtx = null;
 var _noiseBuffer = null;
 function getAudioCtx() {
@@ -350,7 +405,6 @@ function getNoiseBuffer(ctx) {
   return _noiseBuffer;
 }
 
-/* Single bubble pop (used inside fizz) */
 function _bubble(ctx, t, freq, amp) {
   var o = ctx.createOscillator();
   var g = ctx.createGain();
@@ -364,11 +418,9 @@ function _bubble(ctx, t, freq, amp) {
   o.start(t); o.stop(t + 0.14);
 }
 
-/* Carbonated fizz: hissing noise + many small bubble pops */
 function playFizz() {
   var ctx = getAudioCtx(); if (!ctx) return;
   var t0 = ctx.currentTime;
-  // Hiss layer: white noise through high-pass filter
   var src = ctx.createBufferSource(); src.buffer = getNoiseBuffer(ctx); src.loop = true;
   var hp = ctx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 1800; hp.Q.value = 0.7;
   var hg = ctx.createGain();
@@ -378,7 +430,6 @@ function playFizz() {
   hg.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.0);
   src.connect(hp); hp.connect(hg); hg.connect(ctx.destination);
   src.start(t0); src.stop(t0 + 2.05);
-  // Bubble pops scattered in time
   for (var i = 0; i < 22; i++) {
     var bt = t0 + 0.05 + Math.random() * 1.7;
     var f = 180 + Math.random() * 520;
@@ -386,11 +437,9 @@ function playFizz() {
   }
 }
 
-/* Explosion: low thump + filtered noise burst with downward sweep */
 function playExplode() {
   var ctx = getAudioCtx(); if (!ctx) return;
   var t0 = ctx.currentTime;
-  // Noise burst through dropping low-pass = "boom"
   var src = ctx.createBufferSource(); src.buffer = getNoiseBuffer(ctx);
   var lp = ctx.createBiquadFilter(); lp.type = "lowpass";
   lp.frequency.setValueAtTime(2400, t0);
@@ -400,7 +449,7 @@ function playExplode() {
   ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.85);
   src.connect(lp); lp.connect(ng); ng.connect(ctx.destination);
   src.start(t0); src.stop(t0 + 0.9);
-  // Sub-bass thump: sine sweep
+
   var o = ctx.createOscillator();
   var og = ctx.createGain();
   o.type = "sine";
@@ -410,35 +459,24 @@ function playExplode() {
   og.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.55);
   o.connect(og); og.connect(ctx.destination);
   o.start(t0); o.stop(t0 + 0.6);
-  // Crackle: high-passed noise tail
-  var src2 = ctx.createBufferSource(); src2.buffer = getNoiseBuffer(ctx);
-  var hp2 = ctx.createBiquadFilter(); hp2.type = "highpass"; hp2.frequency.value = 3500;
-  var ng2 = ctx.createGain();
-  ng2.gain.setValueAtTime(0.0001, t0);
-  ng2.gain.exponentialRampToValueAtTime(0.18, t0 + 0.02);
-  ng2.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.4);
-  src2.connect(hp2); hp2.connect(ng2); ng2.connect(ctx.destination);
-  src2.start(t0); src2.stop(t0 + 0.45);
 }
 
-/* Whoosh: rising-then-falling band-passed noise (combustion / flame burst) */
 function playWhoosh() {
   var ctx = getAudioCtx(); if (!ctx) return;
   var t0 = ctx.currentTime;
   var src = ctx.createBufferSource(); src.buffer = getNoiseBuffer(ctx);
   var bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = 1.2;
-  bp.frequency.setValueAtTime(400, t0);
-  bp.frequency.exponentialRampToValueAtTime(2200, t0 + 0.35);
-  bp.frequency.exponentialRampToValueAtTime(600, t0 + 1.0);
+  bp.frequency.setValueAtTime(300, t0);
+  bp.frequency.exponentialRampToValueAtTime(1800, t0 + 0.3);
+  bp.frequency.exponentialRampToValueAtTime(500, t0 + 0.9);
   var ng = ctx.createGain();
   ng.gain.setValueAtTime(0.0001, t0);
-  ng.gain.exponentialRampToValueAtTime(0.18, t0 + 0.15);
-  ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.1);
+  ng.gain.exponentialRampToValueAtTime(0.2, t0 + 0.15);
+  ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.95);
   src.connect(bp); bp.connect(ng); ng.connect(ctx.destination);
-  src.start(t0); src.stop(t0 + 1.15);
+  src.start(t0); src.stop(t0 + 1.0);
 }
 
-/* Plop: low gentle splash for precipitation */
 function playPlop() {
   var ctx = getAudioCtx(); if (!ctx) return;
   var t0 = ctx.currentTime;
@@ -452,16 +490,8 @@ function playPlop() {
   g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.25);
   o.connect(g); g.connect(ctx.destination);
   o.start(t0); o.stop(t0 + 0.28);
-  // Tiny ripple noise
-  var src = ctx.createBufferSource(); src.buffer = getNoiseBuffer(ctx);
-  var lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 800;
-  var ng = ctx.createGain();
-  ng.gain.setValueAtTime(0.04, t0); ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.3);
-  src.connect(lp); lp.connect(ng); ng.connect(ctx.destination);
-  src.start(t0); src.stop(t0 + 0.32);
 }
 
-/* Tick: short percussive click for UI taps */
 function playTick() {
   var ctx = getAudioCtx(); if (!ctx) return;
   var t0 = ctx.currentTime;
@@ -476,7 +506,6 @@ function playTick() {
   o.start(t0); o.stop(t0 + 0.07);
 }
 
-/* Achievement: 3-note ascending arpeggio C-E-G */
 function playAchievement() {
   var ctx = getAudioCtx(); if (!ctx) return;
   var t0 = ctx.currentTime;
@@ -495,9 +524,9 @@ function playAchievement() {
   });
 }
 
-/* Router — keeps the existing playBeep(type) interface */
 function playBeep(type) {
   try {
+    triggerHaptic(type);
     if (type === "explode") return playExplode();
     if (type === "whoosh" || type === "combustion") return playWhoosh();
     if (type === "plop" || type === "precip") return playPlop();
@@ -508,10 +537,22 @@ function playBeep(type) {
 }
 
 /* ═══ HELPERS ═══ */
-function findReaction(b) {
+function findReaction(b, isHeated) {
   if (b.length !== 2) return null;
   var ids = [b[0].id, b[1].id];
-  return RXN.find(function(r) { return r.r.indexOf(ids[0]) !== -1 && r.r.indexOf(ids[1]) !== -1; }) || null;
+  return RXN.find(function(r) {
+    if (r.r.indexOf(ids[0]) === -1 || r.r.indexOf(ids[1]) === -1) return false;
+    if (r.needsHeat && !isHeated) return false;
+    return true;
+  }) || null;
+}
+
+function findPotentialReaction(b) {
+  if (b.length !== 2) return null;
+  var ids = [b[0].id, b[1].id];
+  return RXN.find(function(r) {
+    return r.r.indexOf(ids[0]) !== -1 && r.r.indexOf(ids[1]) !== -1;
+  }) || null;
 }
 
 function pHColor(pH) {
@@ -565,7 +606,7 @@ function themeStyles(theme) {
   };
 }
 
-/* ═══ MOLECULES (CPK-style mini structures) ═══ */
+/* ═══ MOLECULAR CPK MINI-STRUCTURES ═══ */
 var ATOM_COLORS = {
   H:"#f5f5f5", O:"#ff5252", N:"#3f51b5", C:"#555555",
   Na:"#ffd54f", K:"#9575cd", Cl:"#69f0ae", F:"#aeea00",
@@ -574,7 +615,6 @@ var ATOM_COLORS = {
   Al:"#cfd8dc", Pb:"#607d8b", I:"#7e57c2", Br:"#8d6e63",
 };
 
-// Each molecule: atoms = [symbol, dx, dy, radius]; bonds = [[i,j], ...]
 var MOL = {
   "H2O":   { atoms:[["O",0,-2,11],["H",-15,10,7],["H",15,10,7]], bonds:[[0,1],[0,2]] },
   "H2":    { atoms:[["H",-10,0,8],["H",10,0,8]], bonds:[[0,1]] },
@@ -584,16 +624,26 @@ var MOL = {
   "NaCl":  { atoms:[["Na",-13,0,12],["Cl",13,0,12]], bonds:[[0,1]] },
   "KCl":   { atoms:[["K",-13,0,12],["Cl",13,0,12]], bonds:[[0,1]] },
   "MgO":   { atoms:[["Mg",-13,0,12],["O",13,0,11]], bonds:[[0,1]] },
+  "CuO":   { atoms:[["Cu",-12,0,12],["O",12,0,11]], bonds:[[0,1]] },
   "CaO":   { atoms:[["Ca",-13,0,12],["O",13,0,11]], bonds:[[0,1]] },
+  "FeS":   { atoms:[["Fe",-12,0,12],["S",12,0,11]], bonds:[[0,1]] },
+  "Cu2S":  { atoms:[["S",0,0,11],["Cu",-17,0,11],["Cu",17,0,11]], bonds:[[0,1],[0,2]] },
+  "NO2":   { atoms:[["N",0,-3,10],["O",-15,8,9],["O",15,8,9]], bonds:[[0,1],[0,2]] },
+  "SO2":   { atoms:[["S",0,-3,11],["O",-15,8,9],["O",15,8,9]], bonds:[[0,1],[0,2]] },
+  "PbI2":  { atoms:[["Pb",0,0,13],["I",-20,0,11],["I",20,0,11]], bonds:[[0,1],[0,2]] },
+  "NH4Cl": { atoms:[["N",0,0,10],["H",-12,-8,6],["H",12,-8,6],["H",0,14,6],["Cl",0,-18,11]], bonds:[[0,1],[0,2],[0,3],[0,4]] },
   "MgCl2": { atoms:[["Mg",0,0,11],["Cl",-20,2,11],["Cl",20,2,11]], bonds:[[0,1],[0,2]] },
   "CaCl2": { atoms:[["Ca",0,0,12],["Cl",-20,2,11],["Cl",20,2,11]], bonds:[[0,1],[0,2]] },
   "ZnCl2": { atoms:[["Zn",0,0,11],["Cl",-20,2,11],["Cl",20,2,11]], bonds:[[0,1],[0,2]] },
   "FeCl2": { atoms:[["Fe",0,0,11],["Cl",-20,2,11],["Cl",20,2,11]], bonds:[[0,1],[0,2]] },
   "HCl":   { atoms:[["H",-10,0,7],["Cl",10,0,11]], bonds:[[0,1]] },
   "AgCl":  { atoms:[["Ag",-13,0,12],["Cl",13,0,12]], bonds:[[0,1]] },
+  "AgI":   { atoms:[["Ag",-13,0,12],["I",13,0,12]], bonds:[[0,1]] },
   "NaOH":  { atoms:[["Na",-16,0,12],["O",4,0,10],["H",18,9,7]], bonds:[[0,1],[1,2]] },
+  "KOH":   { atoms:[["K",-16,0,12],["O",4,0,10],["H",18,9,7]], bonds:[[0,1],[1,2]] },
   "Cu(OH)2": { atoms:[["Cu",0,0,11],["O",-16,-4,9],["O",16,-4,9],["H",-24,5,6],["H",24,5,6]], bonds:[[0,1],[0,2],[1,3],[2,4]] },
   "NaNO3": { atoms:[["N",0,0,9],["O",-15,-7,9],["O",15,-7,9],["O",0,14,9],["Na",0,-22,11]], bonds:[[0,1],[0,2],[0,3],[0,4]] },
+  "KNO3":  { atoms:[["N",0,0,9],["O",-15,-7,9],["O",15,-7,9],["O",0,14,9],["K",0,-22,11]], bonds:[[0,1],[0,2],[0,3],[0,4]] },
   "Na2SO4":{ atoms:[["S",0,0,10],["O",-15,-8,9],["O",15,-8,9],["O",-9,14,9],["O",9,14,9]], bonds:[[0,1],[0,2],[0,3],[0,4]] },
   "MgSO4": { atoms:[["S",0,0,10],["O",-15,-8,9],["O",15,-8,9],["O",-9,14,9],["O",9,14,9]], bonds:[[0,1],[0,2],[0,3],[0,4]] },
   "ZnSO4": { atoms:[["S",0,0,10],["O",-15,-8,9],["O",15,-8,9],["O",-9,14,9],["O",9,14,9]], bonds:[[0,1],[0,2],[0,3],[0,4]] },
@@ -609,7 +659,7 @@ function parseProducts(eq) {
   var rhs = eq.split("->")[1] || "";
   return rhs.split("+").map(function(p) {
     return p.trim().replace(/^\d+\s*/, "").split(/\s+/)[0];
-  }).filter(function(p) { return p && p !== "fire" && p !== "heat" && p !== "light" && MOL[p]; });
+  }).filter(function(p) { return p && p !== "fire" && p !== "heat" && p !== "light" && p !== "lilac" && MOL[p]; });
 }
 
 function MoleculeView(props) {
@@ -650,7 +700,49 @@ function MoleculeView(props) {
   );
 }
 
-/* ═══ BEAKER (SVG with liquid mixing animation) ═══ */
+/* ═══ BUNSEN BURNER SVG ═══ */
+function BunsenBurner(props) {
+  var heat = props.heat;
+  return (
+    <svg width="64" height="32" viewBox="0 0 64 32" style={{ overflow:"visible" }}>
+      <defs>
+        <radialGradient id="flameOuter" cx="50%" cy="80%" r="55%">
+          <stop offset="0%" stopColor="#ffff00" stopOpacity="0.95" />
+          <stop offset="45%" stopColor="#ff5722" stopOpacity="0.85" />
+          <stop offset="100%" stopColor="#ff1744" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="flameInner" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0%" stopColor="#00e5ff" stopOpacity="0.95" />
+          <stop offset="70%" stopColor="#2979ff" stopOpacity="0.8" />
+          <stop offset="100%" stopColor="#d500f9" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {/* Burner Base & Stem */}
+      <rect x="28" y="15" width="8" height="13" rx="1" fill="#78909c" stroke="#455a64" strokeWidth="1" />
+      <rect x="20" y="27" width="24" height="4" rx="2" fill="#546e7a" stroke="#37474f" strokeWidth="1" />
+      <circle cx="32" cy="21" r="2.2" fill="#263238" />
+
+      {/* Flame when heat is ON */}
+      {heat && (
+        <g>
+          {/* Outer orange/yellow flame with flickering animation */}
+          <path d="M 32 -7 Q 24 6 26 15 Q 32 17 38 15 Q 40 6 32 -7 Z" fill="url(#flameOuter)">
+            <animate attributeName="d" values="M 32 -7 Q 24 6 26 15 Q 32 17 38 15 Q 40 6 32 -7 Z;M 32 -11 Q 22 5 26 15 Q 32 18 38 15 Q 42 5 32 -11 Z;M 32 -8 Q 25 7 26 15 Q 32 17 38 15 Q 39 7 32 -8 Z" dur="0.22s" repeatCount="indefinite" />
+          </path>
+          {/* Inner hot blue cone */}
+          <path d="M 32 3 Q 28 9 29 15 Q 32 16 35 15 Q 36 9 32 3 Z" fill="url(#flameInner)">
+            <animate attributeName="d" values="M 32 3 Q 28 9 29 15 Q 32 16 35 15 Q 36 9 32 3 Z;M 32 0 Q 27 8 29 15 Q 32 16.5 35 15 Q 37 8 32 0 Z;M 32 3 Q 28 9 29 15 Q 32 16 35 15 Q 36 9 32 3 Z" dur="0.28s" repeatCount="indefinite" />
+          </path>
+          <circle cx="32" cy="7" r="14" fill="#ff6d00" opacity="0.2">
+            <animate attributeName="opacity" values="0.15;0.28;0.15" dur="0.35s" repeatCount="indefinite" />
+          </circle>
+        </g>
+      )}
+    </svg>
+  );
+}
+
+/* ═══ BEAKER SVG ═══ */
 function Beaker(props) {
   var bench = props.bench;
   var running = props.running;
@@ -662,7 +754,7 @@ function Beaker(props) {
   var fillCount = bench.length;
 
   return (
-    <svg width="86" height="108" viewBox="0 0 86 108">
+    <svg width="86" height="106" viewBox="0 0 86 106">
       <defs>
         <linearGradient id="bkLiqA" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={c1||"#333"} stopOpacity="0.55"/>
@@ -686,19 +778,16 @@ function Beaker(props) {
         fill={T.isLight?"rgba(255,255,255,0.4)":"rgba(255,255,255,0.04)"}
         stroke={T.glassStroke} strokeWidth="1.6" strokeLinejoin="round"/>
       <line x1="14" y1="22" x2="72" y2="22" stroke={T.glassStroke} strokeWidth="1.6" strokeLinecap="round"/>
-      {/* Volume marks */}
       {[40,55,70].map(function(y,i) {
         return <line key={i} x1="20" y1={y} x2="26" y2={y} stroke={T.glassStroke} strokeWidth="0.8" opacity="0.6"/>;
       })}
 
       <g clipPath="url(#bkClip)">
-        {/* Single liquid */}
         {fillCount === 1 && c1 && (
           <rect x="20" y="65" width="46" height="35" fill="url(#bkLiqA)">
             <animate attributeName="y" values="67;63;67" dur="2.2s" repeatCount="indefinite"/>
           </rect>
         )}
-        {/* Two unmixed liquids side by side */}
         {fillCount === 2 && !running && !done && (
           <g>
             <rect x="20" y="62" width="23" height="35" fill="url(#bkLiqA)"/>
@@ -706,13 +795,11 @@ function Beaker(props) {
             <line x1="43" y1="62" x2="43" y2="96" stroke="rgba(255,255,255,0.25)" strokeWidth="0.5"/>
           </g>
         )}
-        {/* Mixing/done */}
         {(running || done) && fillCount === 2 && (
           <g>
             <rect x="20" y="55" width="46" height="42" fill="url(#bkLiqMix)">
               {running && <animate attributeName="opacity" values="0.55;1;0.7;1" dur="0.55s" repeatCount="indefinite"/>}
             </rect>
-            {/* Wave top */}
             <path d="M 20 56 Q 30 52 43 56 T 66 56 L 66 60 L 20 60 Z" fill={color} opacity="0.8">
               {running && <animate attributeName="d" values="M 20 56 Q 30 52 43 56 T 66 56 L 66 60 L 20 60 Z;M 20 58 Q 30 54 43 58 T 66 58 L 66 60 L 20 60 Z;M 20 56 Q 30 52 43 56 T 66 56 L 66 60 L 20 60 Z" dur="0.7s" repeatCount="indefinite"/>}
             </path>
@@ -729,24 +816,18 @@ function Beaker(props) {
                 <animate attributeName="cy" values="92;55" dur="1s" repeatCount="indefinite" begin="0.6s"/>
                 <animate attributeName="opacity" values="0;1;0" dur="1s" repeatCount="indefinite" begin="0.6s"/>
               </circle>
-              <circle cx="38" cy="85" r="1.8" fill="rgba(255,255,255,0.6)">
-                <animate attributeName="cy" values="92;55" dur="1.3s" repeatCount="indefinite" begin="0.15s"/>
-                <animate attributeName="opacity" values="0;1;0" dur="1.3s" repeatCount="indefinite" begin="0.15s"/>
-              </circle>
             </g>}
           </g>
         )}
       </g>
-
-      {/* Reflection highlight */}
       <line x1="26" y1="34" x2="26" y2="80" stroke="rgba(255,255,255,0.3)" strokeWidth="2.5" strokeLinecap="round"/>
     </svg>
   );
 }
 
-/* ═══ THERMOMETER ═══ */
+/* ═══ THERMOMETER SVG ═══ */
 function Thermometer(props) {
-  var temp = props.temp; // "exo" | "endo" | "neutral" | null
+  var temp = props.temp;
   var active = props.active;
   var T = props.T || themeStyles("dark");
 
@@ -759,47 +840,32 @@ function Thermometer(props) {
   var fillTop = 84 - level * 60;
 
   return (
-    <svg width="30" height="108" viewBox="0 0 30 108">
+    <svg width="30" height="106" viewBox="0 0 30 106">
       <defs>
         <linearGradient id="thGlass" x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stopColor={T.isLight?"rgba(0,0,0,0.05)":"rgba(255,255,255,0.06)"}/>
           <stop offset="50%" stopColor={T.isLight?"rgba(0,0,0,0.12)":"rgba(255,255,255,0.22)"}/>
           <stop offset="100%" stopColor={T.isLight?"rgba(0,0,0,0.05)":"rgba(255,255,255,0.06)"}/>
         </linearGradient>
-        <linearGradient id={"thFill_"+(temp||"none")} x1="0" y1="1" x2="0" y2="0">
-          <stop offset="0%" stopColor={color} stopOpacity="1"/>
-          <stop offset="100%" stopColor={color} stopOpacity="0.55"/>
-        </linearGradient>
       </defs>
-
-      {/* Bulb */}
       <circle cx="15" cy="90" r="9" fill={T.isLight?"rgba(0,0,0,0.05)":"rgba(255,255,255,0.06)"} stroke={T.glassStroke} strokeWidth="1.3"/>
       <circle cx="15" cy="90" r="7" fill={color}>
         {active && <animate attributeName="r" values="7;7.8;7" dur="1.1s" repeatCount="indefinite"/>}
       </circle>
-
-      {/* Tube */}
       <rect x="11.5" y="20" width="7" height="68" rx="3.5" fill="url(#thGlass)" stroke={T.glassStroke} strokeWidth="1.3"/>
-
-      {/* Mercury fill */}
-      <rect x="13" y={fillTop} width="4" height={88-fillTop} fill={"url(#thFill_"+(temp||"none")+")"} style={{ transition:"y 1.4s ease-out, height 1.4s ease-out" }}/>
-
-      {/* Tick marks */}
+      <rect x="13" y={fillTop} width="4" height={88-fillTop} fill={color} style={{ transition:"y 1.4s ease-out, height 1.4s ease-out" }}/>
       {[28,40,52,64,76].map(function(y,i) {
         return <line key={i} x1="19" y1={y} x2="23" y2={y} stroke={T.glassStroke} strokeWidth="0.9" opacity="0.7"/>;
       })}
-
-      {/* Label */}
       <text x="15" y="14" textAnchor="middle" fontSize="9" fontWeight="900" fill={color} fontFamily="inherit">{label}</text>
     </svg>
   );
 }
 
-/* ═══ PARTICLES ═══ */
+/* ═══ PARTICLES HOOK ═══ */
 function useParticles() {
   var ref = useRef([]);
   var idRef = useRef(0);
-  var rafRef = useRef(null);
   var [tick, setTick] = useState(0);
 
   var emit = useCallback(function(color, type, count) {
@@ -828,7 +894,7 @@ function useParticles() {
   return { particles: ref.current, emit: emit };
 }
 
-/* ═══ TRENDS GRAPH ═══ */
+/* ═══ PERIODIC TRENDS GRAPH ═══ */
 function TrendsGraph(props) {
   var prop = COLOR_PROPS[props.prop];
   var T = props.T;
@@ -857,17 +923,14 @@ function TrendsGraph(props) {
     return Math.round(v*100)/100;
   };
 
-  // Period boundaries
   var periodStarts = [3,11,19,37,55,87];
   var lineColor = T.isLight ? "#1976d2" : "#40c4ff";
 
   return (
     <svg width="100%" height={H} viewBox={"0 0 "+W+" "+H} preserveAspectRatio="xMidYMid meet">
-      {/* Period bands */}
       {periodStarts.map(function(s, i) {
         return <line key={"ps"+i} x1={px(s)} y1={pad.t} x2={px(s)} y2={pad.t+ih} stroke={T.headerBorder} strokeWidth="0.5" strokeDasharray="2,3"/>;
       })}
-      {/* Y grid + ticks */}
       {yTicks.map(function(v, i) {
         var y = py(v);
         return <g key={"yt"+i}>
@@ -875,7 +938,6 @@ function TrendsGraph(props) {
           <text x={pad.l-5} y={y+3} fontSize="9" fill={T.textDim} textAnchor="end" fontFamily="inherit">{fmt(v)}</text>
         </g>;
       })}
-      {/* X ticks */}
       {[1,18,36,54,86,118].map(function(n, i) {
         var x = px(n);
         return <g key={"xt"+i}>
@@ -883,13 +945,10 @@ function TrendsGraph(props) {
           <text x={x} y={pad.t+ih+12} fontSize="9" fill={T.textDim} textAnchor="middle" fontFamily="inherit">{n}</text>
         </g>;
       })}
-      {/* Connecting line */}
       <polyline points={points.map(function(p){return px(p.n)+","+py(p.v)}).join(" ")} fill="none" stroke={lineColor} strokeWidth="1" opacity="0.45"/>
-      {/* Dots colored by category */}
       {points.map(function(p, i) {
         return <circle key={"d"+i} cx={px(p.n)} cy={py(p.v)} r="2.4" fill={CC[p.cat]||"#666"} stroke={T.isLight?"#fff":"#0a0e18"} strokeWidth="0.4"/>;
       })}
-      {/* Axis labels */}
       <text x={W/2} y={H-2} fontSize="9" fill={T.textDim} textAnchor="middle" fontFamily="inherit">Atomic Number →</text>
       <text x={6} y={pad.t+ih/2} fontSize="9" fill={T.textDim} textAnchor="middle" fontFamily="inherit" transform={"rotate(-90 6 "+(pad.t+ih/2)+")"}>{prop.label}</text>
     </svg>
@@ -948,7 +1007,7 @@ function CompareView(props) {
   );
 }
 
-/* ═══ PERIODIC TABLE COMPONENT ═══ */
+/* ═══ PERIODIC TABLE VIEW ═══ */
 function PTView(props) {
   var T = props.T || themeStyles("dark");
   var [sel, setSel] = useState(null);
@@ -961,7 +1020,6 @@ function PTView(props) {
   var [showTrends, setShowTrends] = useState(false);
   var [trendProp, setTrendProp] = useState("en");
 
-  // Back handler refs (top of stack — closes modals first)
   var selRef = useRef(sel);
   var showCompareRef = useRef(showCompare);
   var showTrendsRef = useRef(showTrends);
@@ -1008,6 +1066,7 @@ function PTView(props) {
   }
 
   function handleClick(el) {
+    playBeep("tick");
     if (compareMode) {
       setCompare(function(prev) {
         if (prev.find(function(p){return p.n===el.n})) return prev.filter(function(p){return p.n!==el.n});
@@ -1043,25 +1102,22 @@ function PTView(props) {
 
   return (
     <div style={{ padding: "10px 8px", paddingBottom: 30 }}>
-      <input value={search} onChange={function(e){setSearch(e.target.value)}} placeholder="Search element..." style={{ width:"100%",padding:"7px 10px",borderRadius:8,border:"1px solid "+T.headerBorder,background:T.surfaceAlt,color:T.text,fontSize:14,fontFamily:"inherit",outline:"none",marginBottom:6 }} />
+      <input value={search} onChange={function(e){setSearch(e.target.value)}} placeholder="Search element by name, symbol, or #..." style={{ width:"100%",padding:"8px 12px",borderRadius:8,border:"1px solid "+T.headerBorder,background:T.surfaceAlt,color:T.text,fontSize:14,fontFamily:"inherit",outline:"none",marginBottom:6 }} />
 
-      {/* Mode toolbar: compare + trends */}
       <div style={{ display:"flex",gap:4,marginBottom:6 }}>
-        <button onClick={function(){setCompareMode(!compareMode);if(compareMode)setCompare([])}} style={{ flex:1,padding:"5px 6px",borderRadius:6,fontSize:11,fontWeight:700,fontFamily:"inherit",cursor:"pointer",background:compareMode?"rgba(0,230,118,.12)":T.surfaceAlt,border:"1px solid "+(compareMode?"rgba(0,230,118,.4)":T.headerBorder),color:compareMode?"#00e676":T.textDim }}>{compareMode?"⚖ COMPARE ON ("+compare.length+"/2)":"⚖ Compare"}</button>
-        <button onClick={function(){setShowTrends(true)}} style={{ flex:1,padding:"5px 6px",borderRadius:6,fontSize:11,fontWeight:700,fontFamily:"inherit",cursor:"pointer",background:T.surfaceAlt,border:"1px solid "+T.headerBorder,color:"#40c4ff" }}>📈 Trends</button>
-        {compareMode && compare.length>0 && <button onClick={function(){setCompare([])}} style={{ padding:"5px 8px",borderRadius:6,fontSize:11,fontWeight:700,fontFamily:"inherit",cursor:"pointer",background:"rgba(255,80,80,.08)",border:"1px solid rgba(255,80,80,.25)",color:"#ef5350" }}>Clear</button>}
+        <button onClick={function(){setCompareMode(!compareMode);if(compareMode)setCompare([])}} style={{ flex:1,padding:"6px 6px",borderRadius:6,fontSize:11,fontWeight:700,fontFamily:"inherit",cursor:"pointer",background:compareMode?"rgba(0,230,118,.12)":T.surfaceAlt,border:"1px solid "+(compareMode?"rgba(0,230,118,.4)":T.headerBorder),color:compareMode?"#00e676":T.textDim }}>{compareMode?"⚖ COMPARE ("+compare.length+"/2)":"⚖ Compare"}</button>
+        <button onClick={function(){setShowTrends(true)}} style={{ flex:1,padding:"6px 6px",borderRadius:6,fontSize:11,fontWeight:700,fontFamily:"inherit",cursor:"pointer",background:T.surfaceAlt,border:"1px solid "+T.headerBorder,color:"#40c4ff" }}>📈 Trends</button>
+        {compareMode && compare.length>0 && <button onClick={function(){setCompare([])}} style={{ padding:"6px 8px",borderRadius:6,fontSize:11,fontWeight:700,fontFamily:"inherit",cursor:"pointer",background:"rgba(255,80,80,.08)",border:"1px solid rgba(255,80,80,.25)",color:"#ef5350" }}>Clear</button>}
       </div>
 
-      {/* Color-by-property picker */}
       <div style={{ display:"flex",alignItems:"center",gap:4,marginBottom:6,flexWrap:"wrap" }}>
-        <span style={{ fontSize:13,color:T.textDim,fontWeight:800,letterSpacing:0.5 }}>COLOR:</span>
+        <span style={{ fontSize:12,color:T.textDim,fontWeight:800,letterSpacing:0.5 }}>SCALE:</span>
         {Object.keys(COLOR_PROPS).map(function(k) {
           var on = colorMode === k;
-          return <button key={k} onClick={function(){setColorMode(k)}} style={{ padding:"6px 11px",borderRadius:12,fontSize:13,fontWeight:700,fontFamily:"inherit",cursor:"pointer",background:on?"rgba(64,196,255,.15)":T.surfaceAlt,border:"1px solid "+(on?"rgba(64,196,255,.4)":T.headerBorder),color:on?"#40c4ff":T.textDim,whiteSpace:"nowrap" }}>{COLOR_PROPS[k].label}</button>;
+          return <button key={k} onClick={function(){setColorMode(k)}} style={{ padding:"5px 10px",borderRadius:12,fontSize:12,fontWeight:700,fontFamily:"inherit",cursor:"pointer",background:on?"rgba(64,196,255,.15)":T.surfaceAlt,border:"1px solid "+(on?"rgba(64,196,255,.4)":T.headerBorder),color:on?"#40c4ff":T.textDim,whiteSpace:"nowrap" }}>{COLOR_PROPS[k].label}</button>;
         })}
       </div>
 
-      {/* Heat scale legend (shown when not in category mode) */}
       {colorMode !== "category" && activeProp && (
         <div style={{ marginBottom:6,padding:"5px 7px",background:T.surfaceAlt,borderRadius:6,border:"1px solid "+T.headerBorder }}>
           <div style={{ display:"flex",justifyContent:"space-between",fontSize:10,color:T.textDim,fontWeight:700,marginBottom:3 }}>
@@ -1073,14 +1129,12 @@ function PTView(props) {
         </div>
       )}
 
-      {/* Category filter pills */}
-      <div style={{ display:"flex",flexWrap:"wrap",gap:5,marginBottom:8 }}>
+      <div style={{ display:"flex",flexWrap:"wrap",gap:4,marginBottom:8 }}>
         {Object.keys(CC).map(function(c) {
-          return <button key={c} onClick={function(){setCatF(catF===c?null:c)}} style={{ padding:"6px 12px",borderRadius:14,fontSize:13,fontWeight:700,fontFamily:"inherit",cursor:"pointer",background:catF===c?CC[c]+"33":T.surfaceAlt,border:"1px solid "+(catF===c?CC[c]+"66":T.borderSoft),color:catF===c?CC[c]:T.textDim }}>{c}</button>;
+          return <button key={c} onClick={function(){setCatF(catF===c?null:c)}} style={{ padding:"5px 10px",borderRadius:12,fontSize:11,fontWeight:700,fontFamily:"inherit",cursor:"pointer",background:catF===c?CC[c]+"33":T.surfaceAlt,border:"1px solid "+(catF===c?CC[c]+"66":T.borderSoft),color:catF===c?CC[c]:T.textDim }}>{c}</button>;
         })}
       </div>
 
-      {/* The grid */}
       <div style={{ overflowX:"auto",paddingBottom:6 }}>
         <div style={{ display:"grid",gridTemplateColumns:"repeat(18,1fr)",gap:1.5,minWidth:540 }}>
           {cells.map(function(cell) {
@@ -1093,13 +1147,11 @@ function PTView(props) {
             var dim = highlighted && !highlighted[e.n];
             var c = getColor(e);
             var picked = compareIds[e.n];
-            // Heat-mode cells: solid bg with white text for contrast
             var heatMode = colorMode !== "category";
             var bg, brd, txt;
             if (dim) { bg = T.surfaceAlt; brd = T.borderSoft; txt = T.textMute; }
             else if (heatMode) { bg = c; brd = c; txt = "#fff"; }
             else { bg = c+"18"; brd = c+"44"; txt = c; }
-            if (picked) { brd = "#00e676"; }
             return <button key={cell.key} onClick={function(){handleClick(e)}} style={{ aspectRatio:"1",minWidth:0,borderRadius:3,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:"inherit",padding:0,cursor:"pointer",background:bg,border:(picked?"2px solid #00e676":"1px solid "+brd),opacity:dim?0.18:1,color:txt,boxShadow:picked?"0 0 6px rgba(0,230,118,.6)":"none" }}>
               <span style={{ fontSize:8,opacity:0.7 }}>{e.n}</span>
               <span style={{ fontSize:12,fontWeight:800 }}>{e.s}</span>
@@ -1108,7 +1160,6 @@ function PTView(props) {
         </div>
       </div>
 
-      {/* Element detail modal */}
       {sel && (
         <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:20 }} onClick={function(){setSel(null)}}>
           <div onClick={function(e){e.stopPropagation()}} style={{ background:T.isLight?"#fff":"#0d1117",border:"2px solid "+(CC[sel.cat]||"#444"),borderRadius:16,padding:20,maxWidth:340,width:"100%",maxHeight:"80vh",overflowY:"auto" }}>
@@ -1137,7 +1188,6 @@ function PTView(props) {
         </div>
       )}
 
-      {/* Compare modal */}
       {showCompare && compare.length === 2 && (
         <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.88)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:20 }} onClick={function(){setShowCompare(false)}}>
           <div onClick={function(e){e.stopPropagation()}} style={{ background:T.isLight?"#fff":"#0d1117",border:"2px solid #00e676",borderRadius:16,padding:18,maxWidth:380,width:"100%",maxHeight:"85vh",overflowY:"auto" }}>
@@ -1151,7 +1201,6 @@ function PTView(props) {
         </div>
       )}
 
-      {/* Trends modal */}
       {showTrends && (
         <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.88)",zIndex:100,display:"flex",alignItems:"center",justifyContent:"center",padding:14 }} onClick={function(){setShowTrends(false)}}>
           <div onClick={function(e){e.stopPropagation()}} style={{ background:T.isLight?"#fff":"#0d1117",border:"2px solid #40c4ff",borderRadius:16,padding:14,maxWidth:400,width:"100%",maxHeight:"90vh",overflowY:"auto" }}>
@@ -1169,7 +1218,7 @@ function PTView(props) {
               <TrendsGraph prop={trendProp} T={T}/>
             </div>
             <div style={{ fontSize:11,color:T.textDim,marginTop:8,lineHeight:1.5 }}>
-              <strong style={{ color:T.text }}>How to read:</strong> Each dot = one element (colored by category). Vertical dashed lines mark new periods (rows). Notice how properties oscillate periodically — that's the basis of the periodic law.
+              <strong style={{ color:T.text }}>Periodic Law:</strong> Notice how physical & chemical properties fluctuate periodically across rows and down columns!
             </div>
           </div>
         </div>
@@ -1178,47 +1227,511 @@ function PTView(props) {
   );
 }
 
-/* ═══ MAIN ═══ */
+/* ═══ MOLAR MASS CALCULATOR COMPONENT ═══ */
+function parseChemicalFormula(formula) {
+  formula = (formula || "").trim().replace(/\s+/g, "");
+  if (!formula) return null;
+  var parts = formula.split(/[\.·\*]/);
+  var counts = {};
+
+  function parsePart(str, multiplier) {
+    multiplier = multiplier || 1;
+    var stack = [{}];
+    var i = 0;
+    while (i < str.length) {
+      var ch = str[i];
+      if (ch === '(' || ch === '[') {
+        stack.push({});
+        i++;
+      } else if (ch === ')' || ch === ']') {
+        i++;
+        var numStr = "";
+        while (i < str.length && /\d/.test(str[i])) {
+          numStr += str[i];
+          i++;
+        }
+        var groupMult = numStr ? parseInt(numStr, 10) : 1;
+        var top = stack.pop();
+        var current = stack[stack.length - 1];
+        if (top) {
+          for (var el in top) {
+            current[el] = (current[el] || 0) + top[el] * groupMult;
+          }
+        }
+      } else if (/[A-Z]/.test(ch)) {
+        var elName = ch;
+        i++;
+        if (i < str.length && /[a-z]/.test(str[i])) {
+          elName += str[i];
+          i++;
+        }
+        var countStr = "";
+        while (i < str.length && /\d/.test(str[i])) {
+          countStr += str[i];
+          i++;
+        }
+        var elCount = countStr ? parseInt(countStr, 10) : 1;
+        var cur = stack[stack.length - 1];
+        cur[elName] = (cur[elName] || 0) + elCount;
+      } else {
+        i++;
+      }
+    }
+    var res = stack[0];
+    for (var k in res) {
+      counts[k] = (counts[k] || 0) + res[k] * multiplier;
+    }
+  }
+
+  var m0 = parts[0].match(/^(\d+)(.*)/);
+  if (m0) {
+    parsePart(m0[2], parseInt(m0[1], 10));
+  } else {
+    parsePart(parts[0], 1);
+  }
+
+  for (var p = 1; p < parts.length; p++) {
+    var mp = parts[p].match(/^(\d+)?(.*)/);
+    if (mp) {
+      var mult = mp[1] ? parseInt(mp[1], 10) : 1;
+      parsePart(mp[2] || "H2O", mult);
+    }
+  }
+
+  var massMap = {};
+  EL.forEach(function(e) { massMap[e.s] = e; });
+
+  var totalMass = 0;
+  var breakdown = [];
+  for (var symb in counts) {
+    var elInfo = massMap[symb];
+    if (!elInfo) return { error: "Unknown element: " + symb };
+    var elemTotalMass = counts[symb] * elInfo.m;
+    totalMass += elemTotalMass;
+    breakdown.push({
+      symbol: symb,
+      name: elInfo.name,
+      cat: elInfo.cat,
+      count: counts[symb],
+      singleMass: elInfo.m,
+      totalElemMass: elemTotalMass
+    });
+  }
+
+  if (totalMass === 0) return null;
+
+  breakdown.forEach(function(b) {
+    b.percent = (b.totalElemMass / totalMass) * 100;
+  });
+
+  breakdown.sort(function(a, b) { return b.totalElemMass - a.totalElemMass; });
+
+  return {
+    formula: formula,
+    totalMass: totalMass,
+    breakdown: breakdown
+  };
+}
+
+function MolarMassCalc(props) {
+  var T = props.T;
+  var [formula, setFormula] = useState("H2SO4");
+  var presets = ["H2O","NaCl","H2SO4","Ca(OH)2","CaCO3","C6H12O6","KMnO4","(NH4)2SO4","CuSO4*5H2O","NaHCO3"];
+
+  var result = useMemo(function() {
+    return parseChemicalFormula(formula);
+  }, [formula]);
+
+  return (
+    <div style={{ padding:14,maxWidth:420,margin:"0 auto" }}>
+      <div style={{ textAlign:"center",marginBottom:12 }}>
+        <h2 style={{ fontSize:18,fontWeight:900,color:"#00e676",letterSpacing:1 }}>⚖️ MOLAR MASS CALCULATOR</h2>
+        <p style={{ fontSize:11,color:T.textDim,marginTop:2 }}>Enter any chemical formula or hydrate to calculate molecular weight and mass percent.</p>
+      </div>
+
+      <div style={{ display:"flex",gap:6,marginBottom:10 }}>
+        <input
+          value={formula}
+          onChange={function(e){setFormula(e.target.value)}}
+          placeholder="e.g. H2SO4, Ca(OH)2..."
+          style={{ flex:1,padding:"10px 14px",fontSize:16,fontWeight:700,borderRadius:8,border:"1px solid "+T.headerBorder,background:T.surfaceAlt,color:T.text,fontFamily:"inherit",outline:"none" }}
+        />
+        {formula && <button onClick={function(){setFormula("")}} style={{ padding:"8px 12px",borderRadius:8,border:"1px solid "+T.headerBorder,background:T.surfaceAlt,color:T.textDim,fontSize:14,cursor:"pointer" }}>Clear</button>}
+      </div>
+
+      <div style={{ display:"flex",gap:4,flexWrap:"wrap",marginBottom:14 }}>
+        {presets.map(function(p) {
+          return <button key={p} onClick={function(){setFormula(p);playBeep("tick");}} style={{ padding:"4px 8px",borderRadius:6,fontSize:11,fontWeight:700,fontFamily:"inherit",background:formula===p?"rgba(0,230,118,.15)":T.surfaceAlt,border:"1px solid "+(formula===p?"#00e676":T.borderSoft),color:formula===p?"#00e676":T.textDim,cursor:"pointer" }}>{p}</button>;
+        })}
+      </div>
+
+      {result && result.error && (
+        <div style={{ padding:10,borderRadius:8,background:"rgba(255,80,80,.1)",border:"1px solid rgba(255,80,80,.3)",color:"#ef5350",fontSize:13,textAlign:"center" }}>
+          {result.error}
+        </div>
+      )}
+
+      {result && !result.error && (
+        <div style={{ background:T.surfaceAlt,borderRadius:12,border:"1px solid "+T.headerBorder,padding:14 }}>
+          <div style={{ textAlign:"center",paddingBottom:12,borderBottom:"1px solid "+T.borderSoft }}>
+            <div style={{ fontSize:12,color:T.textDim,letterSpacing:1 }}>TOTAL MOLAR MASS</div>
+            <div style={{ fontSize:32,fontWeight:900,color:"#00e676",margin:"4px 0" }}>{result.totalMass.toFixed(3)} <span style={{ fontSize:16,color:T.textDim }}>g/mol</span></div>
+            <div style={{ fontSize:13,color:T.text,fontWeight:600 }}>{result.formula}</div>
+          </div>
+
+          {/* Mass Percentage Stacked Bar */}
+          <div style={{ margin:"14px 0 8px" }}>
+            <div style={{ fontSize:11,color:T.textDim,fontWeight:700,marginBottom:4 }}>MASS PERCENTAGE COMPOSITION</div>
+            <div style={{ display:"flex",height:14,borderRadius:7,overflow:"hidden",boxShadow:"inset 0 1px 3px rgba(0,0,0,.3)" }}>
+              {result.breakdown.map(function(item) {
+                var c = CC[item.cat] || "#29b6f6";
+                return <div key={item.symbol} title={item.symbol+": "+item.percent.toFixed(1)+"%"} style={{ width:item.percent+"%",background:c,minWidth:item.percent>0?4:0 }} />;
+              })}
+            </div>
+          </div>
+
+          <div style={{ marginTop:10 }}>
+            {result.breakdown.map(function(item) {
+              var c = CC[item.cat] || "#29b6f6";
+              return (
+                <div key={item.symbol} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid "+T.borderSoft }}>
+                  <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+                    <div style={{ width:24,height:24,borderRadius:4,background:c+"22",color:c,border:"1px solid "+c+"55",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:900 }}>{item.symbol}</div>
+                    <div>
+                      <div style={{ fontSize:12,fontWeight:700,color:T.text }}>{item.name} <span style={{ fontSize:10,color:T.textDim }}>×{item.count}</span></div>
+                      <div style={{ fontSize:10,color:T.textDim }}>{item.singleMass.toFixed(3)} u</div>
+                    </div>
+                  </div>
+                  <div style={{ textAlign:"right" }}>
+                    <div style={{ fontSize:13,fontWeight:800,color:c }}>{item.percent.toFixed(2)}%</div>
+                    <div style={{ fontSize:10,color:T.textDim }}>{item.totalElemMass.toFixed(2)} g/mol</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══ CHEMISTRY QUIZ COMPONENT ═══ */
+const QUIZ_QUESTIONS = [
+  { q:"What is the chemical formula of Table Salt?", opts:["NaCl","KCl","CaCl2","NaOH"], a:0, exp:"Table salt is Sodium Chloride (NaCl)." },
+  { q:"What color does phenolphthalein turn in alkaline/basic solutions (pH > 8)?", opts:["Colorless","Vibrant Pink / Magenta","Blue","Yellow"], a:1, exp:"Phenolphthalein is colorless in acid and turns vibrant pink in base." },
+  { q:"Which gas is released when Zinc metal reacts with Hydrochloric Acid?", opts:["Oxygen (O2)","Carbon Dioxide (CO2)","Hydrogen (H2)","Chlorine (Cl2)"], a:2, exp:"Active metals displace H+ ions from acid to produce Hydrogen gas (H2)." },
+  { q:"Which element has the highest electronegativity on the Pauling scale?", opts:["Oxygen (O)","Fluorine (F)","Chlorine (Cl)","Helium (He)"], a:1, exp:"Fluorine is the most electronegative element with a value of 3.98." },
+  { q:"What type of reaction absorbs heat from surroundings and turns ice cold?", opts:["Exothermic","Endothermic","Combustion","Neutralization"], a:1, exp:"Endothermic reactions take in thermal energy, causing the temperature to drop." },
+  { q:"What substance acts as a catalyst in Elephant Toothpaste (H2O2 decomposition)?", opts:["Manganese Dioxide (MnO2)","Sodium Chloride","Copper Wire","Sulfuric Acid"], a:0, exp:"MnO2 catalyzes the rapid decomposition of hydrogen peroxide into H2O and O2 gas." },
+  { q:"What is the chemical formula for Chalk, Marble, and Limestone?", opts:["CaSO4","CaCO3","CaO","Ca(OH)2"], a:1, exp:"Chalk, limestone, and marble are all natural forms of Calcium Carbonate (CaCO3)." },
+  { q:"Which alkali metal is stored in mineral oil and burns in water with a violet flame?", opts:["Sodium (Na)","Potassium (K)","Lithium (Li)","Calcium (Ca)"], a:1, exp:"Potassium (K) reacts violently with water and ignites with a characteristic lilac flame." },
+  { q:"What happens when blue litmus paper is dipped into an acidic solution?", opts:["Turns Red","Turns Green","Stays Blue","Turns White"], a:0, exp:"Acids turn blue litmus red; bases turn red litmus blue." },
+  { q:"What is formed when CO2 is bubbled through Limewater (Ca(OH)2)?", opts:["Yellow precipitate","White milky precipitate (CaCO3)","Brown toxic gas","Black soot"], a:1, exp:"CO2 reacts with calcium hydroxide to precipitate milky white calcium carbonate (CaCO3)." },
+  { q:"Which transition metal is liquid at room temperature (25°C)?", opts:["Gallium (Ga)","Mercury (Hg)","Bromine (Br)","Lead (Pb)"], a:1, exp:"Mercury is the only metallic element that is liquid at standard room temperature." },
+  { q:"What forms when Ammonia vapors (NH3) meet Hydrochloric acid fumes (HCl)?", opts:["Dense white smoke of NH4Cl","Green chlorine gas","Water vapor only","Liquid mercury"], a:0, exp:"Gaseous NH3 and HCl react in the air to produce a dense white smoke of NH4Cl crystals." },
+  { q:"What is the pH of neutral pure water at 25°C?", opts:["0","7.0","14.0","4.5"], a:1, exp:"On the pH scale from 0 to 14, 7.0 is neutral." },
+  { q:"Which gas makes a squeaky 'pop' sound when tested with a burning splint?", opts:["Oxygen (O2)","Carbon Dioxide (CO2)","Hydrogen (H2)","Nitrogen (N2)"], a:2, exp:"The squeaky pop test is the definitive laboratory test for flammable Hydrogen gas." },
+  { q:"What is the golden-yellow precipitate formed in the 'Golden Rain' experiment?", opts:["Lead Iodide (PbI2)","Copper Oxide (CuO)","Silver Chloride (AgCl)","Barium Sulfate"], a:0, exp:"Pb(NO3)2 + 2KI produces brilliant golden-yellow lead iodide (PbI2) precipitate." },
+];
+
+function QuizView(props) {
+  var T = props.T;
+  var [qIndex, setQIndex] = useState(0);
+  var [selected, setSelected] = useState(null);
+  var [score, setScore] = useState(0);
+  var [streak, setStreak] = useState(0);
+  var [finished, setFinished] = useState(false);
+
+  var currentQ = QUIZ_QUESTIONS[qIndex];
+
+  function handleSelect(i) {
+    if (selected !== null) return;
+    setSelected(i);
+    var correct = i === currentQ.a;
+    if (correct) {
+      setScore(function(s){return s+1});
+      setStreak(function(st){return st+1});
+      playBeep("achievement");
+    } else {
+      setStreak(0);
+      playBeep("explode");
+    }
+  }
+
+  function handleNext() {
+    if (qIndex + 1 < 10) {
+      setQIndex(qIndex + 1);
+      setSelected(null);
+      playBeep("tick");
+    } else {
+      setFinished(true);
+      maybeShowInterstitial(true);
+    }
+  }
+
+  function restartQuiz() {
+    setQIndex(0);
+    setSelected(null);
+    setScore(0);
+    setStreak(0);
+    setFinished(false);
+    playBeep("tick");
+  }
+
+  if (finished) {
+    return (
+      <div style={{ padding:20,maxWidth:380,margin:"0 auto",textAlign:"center" }}>
+        <div style={{ fontSize:54,marginBottom:8 }}>{score >= 8 ? "🏆" : score >= 5 ? "🎓" : "🧪"}</div>
+        <h2 style={{ fontSize:22,fontWeight:900,color:"#00e676" }}>QUIZ COMPLETE!</h2>
+        <div style={{ fontSize:36,fontWeight:900,color:T.text,margin:"12px 0" }}>{score} / 10</div>
+        <p style={{ fontSize:13,color:T.textDim,marginBottom:20 }}>
+          {score === 10 ? "Flawless! True Chemistry Grand Master!" : score >= 7 ? "Great job! Strong lab knowledge!" : "Keep practicing and experimenting in the lab!"}
+        </p>
+        <button onClick={restartQuiz} style={{ width:"100%",padding:"12px",borderRadius:10,background:"linear-gradient(135deg,#00e676,#00b248)",border:"none",color:"#000",fontSize:15,fontWeight:900,cursor:"pointer",fontFamily:"inherit" }}>PLAY AGAIN</button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding:14,maxWidth:420,margin:"0 auto" }}>
+      <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
+        <div style={{ fontSize:12,color:T.textDim,fontWeight:700 }}>QUESTION {qIndex+1} / 10</div>
+        <div style={{ display:"flex",gap:10 }}>
+          <span style={{ fontSize:12,color:"#ffd700",fontWeight:800 }}>⚡ Streak: {streak}</span>
+          <span style={{ fontSize:12,color:"#00e676",fontWeight:800 }}>Score: {score}</span>
+        </div>
+      </div>
+
+      <div style={{ height:5,borderRadius:3,background:T.surfaceAlt,marginBottom:16,overflow:"hidden" }}>
+        <div style={{ height:"100%",background:"linear-gradient(90deg,#00e676,#40c4ff)",width:((qIndex+1)/10*100)+"%" }}/>
+      </div>
+
+      <div style={{ background:T.surfaceAlt,border:"1px solid "+T.headerBorder,borderRadius:12,padding:16,marginBottom:14 }}>
+        <h3 style={{ fontSize:15,color:T.text,lineHeight:1.4,fontWeight:700 }}>{currentQ.q}</h3>
+      </div>
+
+      <div style={{ display:"flex",flexDirection:"column",gap:8,marginBottom:14 }}>
+        {currentQ.opts.map(function(opt, idx) {
+          var isChosen = selected === idx;
+          var isAnswer = idx === currentQ.a;
+          var bg = T.surfaceAlt;
+          var brd = T.borderSoft;
+          var txt = T.text;
+
+          if (selected !== null) {
+            if (isAnswer) {
+              bg = "rgba(0,230,118,.15)";
+              brd = "#00e676";
+              txt = "#00e676";
+            } else if (isChosen && !isAnswer) {
+              bg = "rgba(255,80,80,.15)";
+              brd = "#ef5350";
+              txt = "#ef5350";
+            }
+          }
+
+          return (
+            <button
+              key={idx}
+              onClick={function(){handleSelect(idx)}}
+              disabled={selected !== null}
+              style={{
+                padding:"12px 14px",borderRadius:10,background:bg,border:"1.5px solid "+brd,color:txt,
+                fontSize:13,fontWeight:700,textAlign:"left",cursor:selected===null?"pointer":"default",
+                fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"space-between"
+              }}
+            >
+              <span>{opt}</span>
+              {selected !== null && isAnswer && <span>✓</span>}
+              {selected !== null && isChosen && !isAnswer && <span>✗</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      {selected !== null && (
+        <div style={{ background:"rgba(64,196,255,.08)",border:"1px solid rgba(64,196,255,.25)",borderRadius:10,padding:12,marginBottom:14 }}>
+          <div style={{ fontSize:11,fontWeight:800,color:"#40c4ff",marginBottom:3 }}>EXPLANATION</div>
+          <div style={{ fontSize:12,color:T.text,lineHeight:1.4 }}>{currentQ.exp}</div>
+        </div>
+      )}
+
+      {selected !== null && (
+        <button onClick={handleNext} style={{ width:"100%",padding:12,borderRadius:10,background:"linear-gradient(135deg,#00e676,#00b248)",border:"none",color:"#000",fontSize:14,fontWeight:900,cursor:"pointer",fontFamily:"inherit" }}>
+          {qIndex + 1 < 10 ? "NEXT QUESTION →" : "SEE FINAL RESULTS"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ═══ REACTION DETAIL INSPECTOR MODAL ═══ */
+function ReactionModal(props) {
+  var rxn = props.rxn;
+  var T = props.T;
+  var onClose = props.onClose;
+  if (!rxn) return null;
+
+  return (
+    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.88)",zIndex:150,display:"flex",alignItems:"center",justifyContent:"center",padding:16 }} onClick={onClose}>
+      <div onClick={function(e){e.stopPropagation()}} style={{ background:T.isLight?"#fff":"#0c101a",border:"2px solid "+(rxn.color||"#00e676"),borderRadius:16,padding:18,maxWidth:380,width:"100%",maxHeight:"88vh",overflowY:"auto" }}>
+        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10 }}>
+          <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+            <div style={{ width:36,height:36,borderRadius:"50%",background:"linear-gradient(135deg,#00e676,#00c853)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:900,color:"#000",fontSize:15 }}>{rxn.score}</div>
+            <div>
+              <h2 style={{ fontSize:15,fontWeight:800,margin:0,color:T.text }}>{rxn.name}</h2>
+              <span style={{ fontSize:10,color:rxn.color,fontWeight:700 }}>{rxn.type.replace("_"," ").toUpperCase()}</span>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background:T.surfaceAlt,border:"none",borderRadius:8,width:28,height:28,color:T.textDim,fontSize:17,cursor:"pointer" }}>X</button>
+        </div>
+
+        <div style={{ background:"rgba(0,230,118,.05)",border:"1px solid rgba(0,230,118,.15)",borderRadius:8,padding:8,marginBottom:8 }}>
+          <div style={{ fontSize:9,color:"#00e676",fontWeight:700 }}>EQUATION</div>
+          <div style={{ fontSize:13,color:T.isLight?"#2e7d32":"#a5d6a7",marginTop:2 }}>{rxn.eq}</div>
+        </div>
+
+        {(function() {
+          var prods = parseProducts(rxn.eq);
+          if (!prods.length) return null;
+          return (
+            <div style={{ background:T.surfaceAlt,border:"1px solid "+T.borderSoft,borderRadius:8,padding:8,marginBottom:8 }}>
+              <div style={{ fontSize:9,color:"#40c4ff",fontWeight:700,marginBottom:4 }}>MOLECULAR STRUCTURE</div>
+              <div style={{ display:"flex",justifyContent:"center",gap:12,flexWrap:"wrap" }}>
+                {prods.slice(0,3).map(function(p,i) { return <MoleculeView key={i} molKey={p} T={T}/>; })}
+              </div>
+            </div>
+          );
+        })()}
+
+        <div style={{ display:"flex",gap:4,marginBottom:8 }}>
+          <div style={{ flex:1,background:T.surfaceAlt,borderRadius:6,padding:6,textAlign:"center" }}>
+            <div style={{ fontSize:14 }}>{rxn.temp==="exo"?"🔥":rxn.temp==="endo"?"❄️":"--"}</div>
+            <div style={{ fontSize:9,fontWeight:700,color:rxn.temp==="exo"?"#ff6a00":rxn.temp==="endo"?"#00bcd4":T.textMute }}>{rxn.temp==="exo"?"EXOTHERMIC":rxn.temp==="endo"?"ENDOTHERMIC":"NEUTRAL"}</div>
+          </div>
+          <div style={{ flex:1,background:T.surfaceAlt,borderRadius:6,padding:6,textAlign:"center" }}>
+            <div style={{ fontSize:12,color:scol(rxn.speed),fontWeight:700 }}>{sdots(rxn.speed)}</div>
+            <div style={{ fontSize:9,fontWeight:700,color:scol(rxn.speed),marginTop:1 }}>{rxn.speed.toUpperCase()}</div>
+          </div>
+        </div>
+
+        {rxn.pH !== null && (
+          <div style={{ background:T.surfaceAlt,borderRadius:6,padding:6,marginBottom:8 }}>
+            <div style={{ height:6,borderRadius:3,background:"linear-gradient(90deg,#ff1744,#ff5722,#ffab00,#cddc39,#76ff03,#00e5ff,#2979ff,#7c4dff)",position:"relative" }}>
+              <div style={{ position:"absolute",left:(rxn.pH/14*100)+"%",top:-2,transform:"translateX(-50%)",width:6,height:10,borderRadius:3,border:"2px solid #fff",background:pHColor(rxn.pH) }} />
+            </div>
+            <div style={{ fontSize:11,color:pHColor(rxn.pH),fontWeight:700,marginTop:3 }}>pH {rxn.pH} - {pHLabel(rxn.pH)}</div>
+          </div>
+        )}
+
+        <div style={{ marginBottom:8 }}>
+          <div style={{ fontSize:10,fontWeight:700,color:"#90caf9" }}>WHAT HAPPENED?</div>
+          <p style={{ fontSize:12,color:T.text,lineHeight:1.4,marginTop:2 }}>{rxn.explain}</p>
+        </div>
+
+        <div style={{ background:"rgba(255,215,0,.05)",border:"1px solid rgba(255,215,0,.15)",borderRadius:6,padding:7,marginBottom:8 }}>
+          <div style={{ fontSize:9,color:"#ffd700",fontWeight:700 }}>FUN FACT</div>
+          <p style={{ fontSize:11,color:T.text,lineHeight:1.4,margin:"2px 0 0" }}>{rxn.fact}</p>
+        </div>
+
+        {rxn.safety && (
+          <div style={{ background:"rgba(255,183,77,.05)",border:"1px solid rgba(255,183,77,.15)",borderRadius:6,padding:7,marginBottom:8 }}>
+            <div style={{ fontSize:9,color:"#ffb74d",fontWeight:700 }}>SAFETY PRECAUTION</div>
+            <p style={{ fontSize:11,color:T.text,lineHeight:1.3,margin:"2px 0 0" }}>{rxn.safety}</p>
+          </div>
+        )}
+
+        <button onClick={onClose} style={{ width:"100%",padding:8,borderRadius:6,background:T.surfaceAlt,border:"1px solid "+T.borderSoft,color:T.textDim,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit" }}>Close</button>
+      </div>
+    </div>
+  );
+}
+
+/* ═══ MAIN LAB CRAFT COMPONENT ═══ */
 function LabCraft(props) {
   var theme = props.theme || "dark";
   var setTheme = props.setTheme || function(){};
   var T = themeStyles(theme);
+
+  // Persistent storage loaders
+  var [log, setLog] = useState(function() {
+    try {
+      var saved = localStorage.getItem("labcraft_v2_log");
+      return saved ? JSON.parse(saved) : [];
+    } catch(e) { return []; }
+  });
+  var [cDone, setCDone] = useState(function() {
+    try {
+      var saved = localStorage.getItem("labcraft_v2_cdone");
+      return saved ? JSON.parse(saved) : [];
+    } catch(e) { return []; }
+  });
+  var [timedBest, setTimedBest] = useState(function() {
+    try {
+      var saved = localStorage.getItem("labcraft_v2_timed_best");
+      return saved ? parseInt(saved, 10) : null;
+    } catch(e) { return null; }
+  });
+  var [soundOn, setSoundOn] = useState(function() {
+    try {
+      var saved = localStorage.getItem("labcraft_v2_sound");
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch(e) { return true; }
+  });
+
+  // Ephemeral state
   var [bench, setBench] = useState([]);
   var [result, setResult] = useState(null);
   var [running, setRunning] = useState(false);
   var [done, setDone] = useState(false);
   var [filter, setFilter] = useState("All");
   var [heat, setHeat] = useState(false);
-  var [log, setLog] = useState([]);
   var [tab, setTab] = useState("lab");
-  var [cDone, setCDone] = useState([]);
   var [newAch, setNewAch] = useState(null);
-  var [soundOn, setSoundOn] = useState(true);
   var [timedActive, setTimedActive] = useState(false);
   var [timedTime, setTimedTime] = useState(60);
   var [timedFound, setTimedFound] = useState([]);
-  var [timedBest, setTimedBest] = useState(null);
+  var [viewLogItem, setViewLogItem] = useState(null);
+  var [logFilter, setLogFilter] = useState("all");
   var prevAchCount = useRef(0);
 
+  // Auto-save effects
+  useEffect(function() {
+    try { localStorage.setItem("labcraft_v2_log", JSON.stringify(log)); } catch(e){}
+  }, [log]);
+  useEffect(function() {
+    try { localStorage.setItem("labcraft_v2_cdone", JSON.stringify(cDone)); } catch(e){}
+  }, [cDone]);
+  useEffect(function() {
+    try { if (timedBest !== null) localStorage.setItem("labcraft_v2_timed_best", String(timedBest)); } catch(e){}
+  }, [timedBest]);
+  useEffect(function() {
+    try { localStorage.setItem("labcraft_v2_sound", JSON.stringify(soundOn)); } catch(e){}
+  }, [soundOn]);
+
   var { particles, emit } = useParticles();
-  var reaction = findReaction(bench);
+  var reaction = findReaction(bench, heat);
+  var potentialReaction = findPotentialReaction(bench);
   var filtered = filter === "All" ? ITEMS : ITEMS.filter(function(i){return i.tag===filter});
 
-  // Refs for back handler (so it always sees latest state)
+  // Back handler refs
   var tabRef = useRef(tab);
   var benchRef = useRef(bench);
   var resultRef = useRef(result);
+  var viewLogItemRef = useRef(viewLogItem);
   useEffect(function() { tabRef.current = tab; }, [tab]);
   useEffect(function() { benchRef.current = bench; }, [bench]);
   useEffect(function() { resultRef.current = result; }, [result]);
+  useEffect(function() { viewLogItemRef.current = viewLogItem; }, [viewLogItem]);
 
-  // Back handler: tab→lab, then result/bench→clear
   useEffect(function() {
     return window.pushBackHandler(function() {
+      if (viewLogItemRef.current) { setViewLogItem(null); return true; }
       if (tabRef.current !== "lab") { setTab("lab"); return true; }
       if (resultRef.current) { clearAll(); return true; }
       if (benchRef.current.length > 0) { clearAll(); return true; }
-      return false; // bubble down to App handler (lab → menu)
+      return false;
     });
   }, []);
 
@@ -1244,6 +1757,7 @@ function LabCraft(props) {
     if (timedTime <= 0) {
       setTimedActive(false);
       if (!timedBest || timedFound.length > timedBest) setTimedBest(timedFound.length);
+      maybeShowInterstitial(true);
       return;
     }
     var t = setTimeout(function(){setTimedTime(function(v){return v-1})}, 1000);
@@ -1272,43 +1786,52 @@ function LabCraft(props) {
     setRunning(true); setResult(null); setDone(false);
     var boom = rxn.anim === "explode";
     if (soundOn) {
-      // Pick the best sound for the reaction type
       var snd = "fizz";
       if (boom && rxn.type === "combustion") snd = "whoosh";
       else if (boom) snd = "explode";
       else if (rxn.type === "precipitation") snd = "plop";
       else if (rxn.type === "combustion") snd = "whoosh";
       playBeep(snd);
-      // Layer a soft fizz behind explosions for richer texture
       if (boom) setTimeout(function(){ playBeep("fizz"); }, 120);
     }
     emit(rxn.color, rxn.anim, boom ? 30 : 15);
     if (boom) {
-      setTimeout(function(){emit("#ff6600","explode",10)}, 350);
-      setTimeout(function(){emit("#ffcc00","explode",8)}, 650);
+      setTimeout(function(){emit("#ff6600","explode",12)}, 350);
+      setTimeout(function(){emit("#ffcc00","explode",10)}, 650);
     }
     setTimeout(function() {
       setRunning(false); setDone(true); setResult(rxn);
       var key = rxn.r.slice().sort().join("+");
+      var isNew = log.indexOf(key) === -1;
       setLog(function(prev){return prev.indexOf(key)!==-1?prev:prev.concat(key)});
       var mc = CHALLENGES.filter(function(ch){return ch.target===key}).map(function(ch){return ch.id});
       if (mc.length) setCDone(function(prev){var n=prev.slice();mc.forEach(function(id){if(n.indexOf(id)===-1)n.push(id)});return n});
       if (timedActive) setTimedFound(function(prev){return prev.indexOf(key)!==-1?prev:prev.concat(key)});
+      if (isNew) maybeShowInterstitial(false);
     }, 2200);
   }
 
   function startTimed() { setTimedActive(true); setTimedTime(60); setTimedFound([]); clearAll(); }
 
-  var rxnCount = function(id){return RXN.filter(function(r){return r.r.indexOf(id)!==-1}).length};
+  function resetProgress() {
+    if (window.confirm("Are you sure you want to reset all discovered reactions and progress?")) {
+      setLog([]);
+      setCDone([]);
+      setTimedBest(null);
+      localStorage.removeItem("labcraft_v2_log");
+      localStorage.removeItem("labcraft_v2_cdone");
+      localStorage.removeItem("labcraft_v2_timed_best");
+      playBeep("tick");
+    }
+  }
 
+  var rxnCount = function(id){return RXN.filter(function(r){return r.r.indexOf(id)!==-1}).length};
   var B = function(p) {
     return {padding:p||"3px 8px",borderRadius:5,fontSize:12,fontFamily:"inherit",cursor:"pointer",border:"1px solid rgba(255,255,255,.08)"};
   };
 
   return (
     <div style={{ minHeight:"100vh",background:T.bg,fontFamily:"'SF Mono','Fira Code','Courier New',monospace",color:T.text,paddingBottom:40 }}>
-      <style>{CSS}</style>
-
       {newAch && <div style={{ position:"fixed",top:60,left:"50%",transform:"translateX(-50%)",zIndex:200,background:"linear-gradient(135deg,rgba(255,215,0,.18),rgba(255,215,0,.06))",border:"1px solid rgba(255,215,0,.4)",borderRadius:12,padding:"10px 20px",display:"flex",alignItems:"center",gap:10,animation:"slideDown .4s ease-out",backdropFilter:"blur(10px)" }}>
         <span style={{ fontSize:28 }}>{newAch.icon}</span>
         <div><div style={{ fontSize:14,fontWeight:800,color:"#ffd700" }}>Achievement Unlocked!</div><div style={{ fontSize:13,color:T.text }}>{newAch.title}</div></div>
@@ -1316,10 +1839,10 @@ function LabCraft(props) {
 
       <header style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 14px",borderBottom:"1px solid "+T.headerBorder,background:T.headerBg,position:"sticky",top:0,zIndex:20,backdropFilter:"blur(12px)" }}>
         <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-          <span style={{ fontSize:20 }}>{"🧪"}</span>
+          <span style={{ fontSize:22 }}>{"🧪"}</span>
           <div>
-            <h1 style={{ fontSize:17,fontWeight:800,margin:0,background:"linear-gradient(90deg,#00e676,#40c4ff)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent" }}>Lab Craft</h1>
-            <p style={{ fontSize:10,color:T.textDim,margin:0 }}>{log.length}/{RXN.length} found | {totalScore} pts | {earnedAch.length} badges</p>
+            <h1 style={{ fontSize:17,fontWeight:900,margin:0,background:"linear-gradient(90deg,#00e676,#40c4ff)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent" }}>Lab Craft</h1>
+            <p style={{ fontSize:10,color:T.textDim,margin:0 }}>{log.length}/{RXN.length} found • {totalScore} pts • {earnedAch.length} badges</p>
           </div>
         </div>
         <div style={{ display:"flex",gap:4 }}>
@@ -1330,21 +1853,32 @@ function LabCraft(props) {
       </header>
 
       {timedActive && <div style={{ background:"linear-gradient(90deg,rgba(255,23,68,.1),rgba(255,215,0,.1))",borderBottom:"1px solid rgba(255,215,0,.2)",padding:"6px 14px",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
-        <div style={{ fontSize:13,fontWeight:700,color:"#ffd700" }}>TIMED {timedTime}s | {timedFound.length} found</div>
+        <div style={{ fontSize:13,fontWeight:700,color:"#ffd700" }}>TIMED CHALLENGE: {timedTime}s • {timedFound.length} found</div>
         <button onClick={function(){setTimedActive(false);if(!timedBest||timedFound.length>timedBest)setTimedBest(timedFound.length)}} style={{ ...B(),color:"#ef5350",borderColor:"rgba(255,80,80,.3)",background:"rgba(255,80,80,.1)" }}>Stop</button>
       </div>}
 
       <div style={{ display:"flex",borderBottom:"1px solid "+T.headerBorder,overflowX:"auto" }}>
-        {[["lab","Lab"],["periodic","Table"],["log","Log "+log.length],["challenge","Quests "+cDone.length],["badges","Badges "+earnedAch.length],["stats","Stats"]].map(function(pair) {
-          return <button key={pair[0]} onClick={function(){setTab(pair[0])}} style={{ flex:1,padding:"12px 4px",fontSize:14,fontWeight:700,fontFamily:"inherit",cursor:"pointer",border:"none",borderBottom:tab===pair[0]?"2px solid #00e676":"2px solid transparent",background:"transparent",color:tab===pair[0]?"#00e676":T.textDim,whiteSpace:"nowrap",minWidth:0 }}>{pair[1]}</button>;
+        {[
+          ["lab","Lab"],
+          ["periodic","Table"],
+          ["calc","Calc"],
+          ["quiz","Quiz"],
+          ["log","Log "+log.length],
+          ["challenge","Quests "+cDone.length],
+          ["badges","Badges "+earnedAch.length],
+          ["stats","Stats"]
+        ].map(function(pair) {
+          return <button key={pair[0]} onClick={function(){setTab(pair[0]);playBeep("tick");}} style={{ flex:1,padding:"11px 8px",fontSize:13,fontWeight:700,fontFamily:"inherit",cursor:"pointer",border:"none",borderBottom:tab===pair[0]?"2px solid #00e676":"2px solid transparent",background:"transparent",color:tab===pair[0]?"#00e676":T.textDim,whiteSpace:"nowrap",minWidth:0 }}>{pair[1]}</button>;
         })}
       </div>
 
       {tab === "periodic" && <PTView T={T}/>}
+      {tab === "calc" && <MolarMassCalc T={T}/>}
+      {tab === "quiz" && <QuizView T={T}/>}
 
       {tab === "lab" && <div>
         <div style={{ display:"flex",gap:3,padding:"6px 14px 2px",overflowX:"auto" }}>
-          {LTAGS.map(function(t){return <button key={t} onClick={function(){setFilter(t)}} style={{ padding:"7px 14px",borderRadius:18,fontSize:13,fontWeight:700,fontFamily:"inherit",cursor:"pointer",whiteSpace:"nowrap",background:filter===t?"rgba(0,230,118,.14)":T.surfaceAlt,border:"1px solid "+(filter===t?"rgba(0,230,118,.4)":T.borderSoft),color:filter===t?"#00e676":T.textDim }}>{t}</button>})}
+          {LTAGS.map(function(t){return <button key={t} onClick={function(){setFilter(t)}} style={{ padding:"6px 12px",borderRadius:16,fontSize:12,fontWeight:700,fontFamily:"inherit",cursor:"pointer",whiteSpace:"nowrap",background:filter===t?"rgba(0,230,118,.14)":T.surfaceAlt,border:"1px solid "+(filter===t?"rgba(0,230,118,.4)":T.borderSoft),color:filter===t?"#00e676":T.textDim }}>{t}</button>})}
         </div>
         <div style={{ padding:"3px 14px 0" }}>
           <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:4 }}>
@@ -1361,13 +1895,27 @@ function LabCraft(props) {
           </div>
         </div>
 
-        <div style={{ display:"flex",justifyContent:"center",gap:6,padding:"5px 14px 0" }}>
-          <button onClick={function(){setHeat(!heat)}} style={{ padding:"4px 10px",borderRadius:14,fontSize:11,fontWeight:600,fontFamily:"inherit",cursor:"pointer",background:heat?"rgba(255,106,0,.12)":"rgba(255,255,255,.02)",border:"1px solid "+(heat?"rgba(255,106,0,.3)":"rgba(255,255,255,.04)"),color:heat?"#ff6a00":T.textMute }}>{heat?"Burner ON":"Burner OFF"}</button>
-          {!timedActive && <button onClick={function(){startTimed();setTab("lab")}} style={{ padding:"4px 10px",borderRadius:14,fontSize:11,fontWeight:600,fontFamily:"inherit",cursor:"pointer",background:"rgba(255,215,0,.08)",border:"1px solid rgba(255,215,0,.2)",color:"#ffd700" }}>60s Challenge</button>}
+        <div style={{ display:"flex",justifyContent:"center",gap:8,padding:"6px 14px 0" }}>
+          <button
+            onClick={function(){
+              setHeat(!heat);
+              playBeep(heat ? "tick" : "whoosh");
+            }}
+            style={{
+              padding:"5px 12px",borderRadius:14,fontSize:11,fontWeight:700,fontFamily:"inherit",cursor:"pointer",
+              background:heat?"rgba(255,106,0,.18)":"rgba(255,255,255,.02)",
+              border:"1.5px solid "+(heat?"#ff6a00":"rgba(255,255,255,.08)"),
+              color:heat?"#ff6a00":T.textMute,
+              animation:(!heat && potentialReaction && potentialReaction.needsHeat) ? "burnerPulse 1.2s infinite" : "none"
+            }}
+          >
+            {heat ? "🔥 Bunsen Burner ON" : "🕯️ Burner OFF"}
+          </button>
+          {!timedActive && <button onClick={function(){startTimed();setTab("lab")}} style={{ padding:"5px 12px",borderRadius:14,fontSize:11,fontWeight:700,fontFamily:"inherit",cursor:"pointer",background:"rgba(255,215,0,.08)",border:"1px solid rgba(255,215,0,.25)",color:"#ffd700" }}>⏱️ 60s Challenge</button>}
         </div>
 
-        <div style={{ margin:"5px 14px 0",background:T.beakerBg,border:"1.5px solid "+T.headerBorder,borderRadius:12,padding:"10px 8px",position:"relative",overflow:"hidden" }}>
-          <div style={{ display:"flex",alignItems:"flex-start",justifyContent:"center",gap:6,position:"relative",zIndex:2,flexWrap:"wrap" }}>
+        <div style={{ margin:"6px 14px 0",background:T.beakerBg,border:"1.5px solid "+T.headerBorder,borderRadius:12,padding:"10px 8px",position:"relative",overflow:"hidden" }}>
+          <div style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:6,position:"relative",zIndex:2,flexWrap:"wrap" }}>
             {[0,1].map(function(i) {
               var item = bench[i];
               if (item) return <div key={i} style={{ width:72 }}>
@@ -1384,28 +1932,49 @@ function LabCraft(props) {
               </div>;
             })}
             <div style={{ fontSize:17,color:T.textMute,alignSelf:"center" }}>{">"}</div>
-            <div style={{ display:"flex",alignItems:"flex-end",gap:4 }}>
+            <div style={{ display:"flex",flexDirection:"column",alignItems:"center" }}>
               <Beaker bench={bench} running={running} done={done} color={result?result.color:(reaction?reaction.color:T.textDim)} T={T}/>
+              <div style={{ marginTop:-8 }}>
+                <BunsenBurner heat={heat} T={T}/>
+              </div>
+            </div>
+            <div style={{ alignSelf:"flex-end",marginBottom:30 }}>
               <Thermometer temp={result?result.temp:(reaction?reaction.temp:null)} active={running||done} T={T}/>
             </div>
           </div>
+
           {particles.map(function(p) {
             return <div key={p.id} style={{ position:"absolute",left:p.x+"%",top:p.y+"%",width:p.sz,height:p.sz,borderRadius:"50%",background:p.color,opacity:p.life,pointerEvents:"none",boxShadow:"0 0 "+p.sz+"px "+p.color+"88",zIndex:10 }} />;
           })}
-          <div style={{ textAlign:"center",fontSize:12,marginTop:8,minHeight:12,zIndex:2,position:"relative" }}>
+
+          <div style={{ textAlign:"center",fontSize:12,marginTop:8,minHeight:14,zIndex:2,position:"relative" }}>
             {bench.length===0 && <span style={{ color:T.textDim }}>Tap 2 chemicals above</span>}
-            {bench.length===1 && <span style={{ color:T.textDim }}>Pick one more <span style={{ color:"#00e676",fontSize:10 }}>(green = compatible)</span></span>}
-            {bench.length===2 && !reaction && <span style={{ color:"#ef5350" }}>No reaction - try different combo!</span>}
-            {bench.length===2 && reaction && !running && !done && <span style={{ color:"#00e676" }}>{reaction.name}</span>}
-            {running && <span style={{ color:"#ffc107" }}>Reacting...</span>}
-            {done && <span style={{ color:"#00e676" }}>Results below</span>}
+            {bench.length===1 && <span style={{ color:T.textDim }}>Pick one more <span style={{ color:"#00e676",fontSize:10 }}>(green glow = compatible)</span></span>}
+            {bench.length===2 && !reaction && !potentialReaction && <span style={{ color:"#ef5350" }}>No reaction - try different combo!</span>}
+            {bench.length===2 && !reaction && potentialReaction && potentialReaction.needsHeat && !heat && (
+              <span style={{ color:"#ff9100",fontWeight:700 }}>🔥 Reaction requires Heat! Turn Bunsen Burner ON.</span>
+            )}
+            {bench.length===2 && reaction && !running && !done && <span style={{ color:"#00e676",fontWeight:700 }}>{reaction.name}</span>}
+            {running && <span style={{ color:"#ffc107",fontWeight:700 }}>Reacting...</span>}
+            {done && <span style={{ color:"#00e676",fontWeight:700 }}>Experiment complete!</span>}
           </div>
-          <button onClick={runExperiment} disabled={!reaction||running||done} style={{ width:"100%",padding:10,border:"none",borderRadius:8,fontSize:13,fontWeight:800,letterSpacing:".06em",fontFamily:"inherit",marginTop:5,background:reaction&&!running&&!done?"linear-gradient(135deg,#00e676,#00c853)":T.surfaceAlt,color:reaction&&!running&&!done?"#000":T.textDim,cursor:reaction&&!running&&!done?"pointer":"default" }}>
-            {running ? "REACTING..." : done ? "DONE" : reaction ? "MIX & REACT" : "SELECT 2 ITEMS"}
+
+          <button
+            onClick={runExperiment}
+            disabled={!reaction||running||done}
+            style={{
+              width:"100%",padding:10,border:"none",borderRadius:8,fontSize:13,fontWeight:800,letterSpacing:".06em",
+              fontFamily:"inherit",marginTop:6,
+              background:reaction&&!running&&!done?"linear-gradient(135deg,#00e676,#00c853)":T.surfaceAlt,
+              color:reaction&&!running&&!done?"#000":T.textDim,
+              cursor:reaction&&!running&&!done?"pointer":"default"
+            }}
+          >
+            {running ? "REACTING..." : done ? "DONE" : reaction ? (reaction.needsHeat ? "HEAT & REACT 🔥" : "MIX & REACT") : (potentialReaction && potentialReaction.needsHeat && !heat ? "NEEDS HEAT" : "SELECT 2 ITEMS")}
           </button>
         </div>
 
-        {result && <div style={{ margin:"8px 14px 0",background:T.isLight?"rgba(255,255,255,.85)":"rgba(6,10,18,.9)",border:"1px solid "+T.headerBorder,borderRadius:12,padding:10,animation:"fadeUp .5s ease-out" }}>
+        {result && <div style={{ margin:"8px 14px 0",background:T.isLight?"rgba(255,255,255,.9)":"rgba(6,10,18,.9)",border:"1px solid "+T.headerBorder,borderRadius:12,padding:10,animation:"fadeUp .4s ease-out" }}>
           <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:8 }}>
             <div style={{ width:40,height:40,borderRadius:"50%",background:"linear-gradient(135deg,#00e676,#00c853)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
               <span style={{ fontSize:17,fontWeight:900,color:"#000" }}>{result.score}</span>
@@ -1420,12 +1989,11 @@ function LabCraft(props) {
             <div style={{ fontSize:13,color:T.isLight?"#2e7d32":"#a5d6a7",marginTop:2 }}>{result.eq}</div>
           </div>
 
-          {/* Molecule 3D-style view of products */}
           {(function() {
             var prods = parseProducts(result.eq);
             if (!prods.length) return null;
             return (
-              <div style={{ background:T.isLight?"rgba(64,196,255,.06)":"rgba(64,196,255,.04)",border:"1px solid rgba(64,196,255,.18)",borderRadius:8,padding:8,marginBottom:5 }}>
+              <div style={{ background:T.surfaceAlt,border:"1px solid "+T.borderSoft,borderRadius:8,padding:8,marginBottom:5 }}>
                 <div style={{ fontSize:9,color:"#40c4ff",fontWeight:700,marginBottom:4 }}>MOLECULAR STRUCTURE</div>
                 <div style={{ display:"flex",justifyContent:"center",gap:14,flexWrap:"wrap" }}>
                   {prods.slice(0,3).map(function(p,i) {
@@ -1435,50 +2003,63 @@ function LabCraft(props) {
               </div>
             );
           })()}
+
           <div style={{ display:"flex",gap:4,marginBottom:5 }}>
-            <div style={{ flex:1,background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.04)",borderRadius:5,padding:5,textAlign:"center" }}>
+            <div style={{ flex:1,background:T.surfaceAlt,borderRadius:5,padding:5,textAlign:"center" }}>
               <div style={{ fontSize:15 }}>{result.temp==="exo"?"🔥":result.temp==="endo"?"❄️":"--"}</div>
               <div style={{ fontSize:9,fontWeight:700,color:result.temp==="exo"?"#ff6a00":result.temp==="endo"?"#00bcd4":T.textMute }}>{result.temp==="exo"?"EXOTHERMIC":result.temp==="endo"?"ENDOTHERMIC":"NEUTRAL"}</div>
             </div>
-            <div style={{ flex:1,background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.04)",borderRadius:5,padding:5,textAlign:"center" }}>
+            <div style={{ flex:1,background:T.surfaceAlt,borderRadius:5,padding:5,textAlign:"center" }}>
               <div style={{ fontSize:13,color:scol(result.speed),fontWeight:700 }}>{sdots(result.speed)}</div>
               <div style={{ fontSize:9,fontWeight:700,color:scol(result.speed),marginTop:1 }}>{result.speed.toUpperCase()}</div>
             </div>
           </div>
-          {result.pH !== null && <div style={{ background:"rgba(255,255,255,.02)",borderRadius:5,padding:6,marginBottom:5 }}>
+          {result.pH !== null && <div style={{ background:T.surfaceAlt,borderRadius:5,padding:6,marginBottom:5 }}>
             <div style={{ height:7,borderRadius:4,background:"linear-gradient(90deg,#ff1744,#ff5722,#ffab00,#cddc39,#76ff03,#00e5ff,#2979ff,#7c4dff)",position:"relative" }}>
-              <div style={{ position:"absolute",left:(result.pH/14*100)+"%",top:-2,transform:"translateX(-50%)",width:7,height:11,borderRadius:4,border:"2px solid #fff",background:pHColor(result.pH),boxShadow:"0 0 5px "+pHColor(result.pH) }} />
+              <div style={{ position:"absolute",left:(result.pH/14*100)+"%",top:-2,transform:"translateX(-50%)",width:7,height:11,borderRadius:4,border:"2px solid #fff",background:pHColor(result.pH) }} />
             </div>
             <div style={{ fontSize:11,color:pHColor(result.pH),fontWeight:700,marginTop:2 }}>pH {result.pH} - {pHLabel(result.pH)}</div>
           </div>}
-          {result.safety && <div style={{ background:"rgba(255,183,77,.04)",border:"1px solid rgba(255,183,77,.08)",borderRadius:5,padding:6,marginBottom:5 }}>
-            <div style={{ fontSize:9,color:"#ffb74d",fontWeight:700 }}>SAFETY</div>
-            <p style={{ fontSize:11,color:T.text,lineHeight:1.4,margin:"2px 0 0" }}>{result.safety}</p>
-          </div>}
           <div style={{ marginBottom:5 }}>
             <div style={{ fontSize:10,fontWeight:700,color:"#90caf9" }}>What Happened?</div>
-            <p style={{ fontSize:12,color:T.text,lineHeight:1.5,margin:"2px 0 0" }}>{result.explain}</p>
+            <p style={{ fontSize:12,color:T.text,lineHeight:1.4,margin:"2px 0 0" }}>{result.explain}</p>
           </div>
-          <div style={{ background:"rgba(255,215,0,.04)",border:"1px solid rgba(255,215,0,.08)",borderRadius:5,padding:6,marginBottom:6 }}>
+          <div style={{ background:"rgba(255,215,0,.04)",border:"1px solid rgba(255,215,0,.1)",borderRadius:5,padding:6,marginBottom:6 }}>
             <div style={{ fontSize:9,color:"#ffd700",fontWeight:700 }}>FUN FACT</div>
             <p style={{ fontSize:12,color:T.text,lineHeight:1.4,margin:"2px 0 0" }}>{result.fact}</p>
           </div>
-          <button onClick={clearAll} style={{ width:"100%",padding:8,background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.05)",borderRadius:5,color:T.textDim,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit" }}>Try Another</button>
+          <button onClick={clearAll} style={{ width:"100%",padding:8,background:T.surfaceAlt,border:"1px solid "+T.borderSoft,borderRadius:6,color:T.textDim,fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit" }}>Try Another</button>
         </div>}
       </div>}
 
       {tab === "log" && <div style={{ padding:14 }}>
         <div style={{ textAlign:"center",marginBottom:10 }}>
           <div style={{ fontSize:22,fontWeight:900,color:"#00e676" }}>{log.length}<span style={{ fontSize:14,color:T.textMute }}>/{RXN.length}</span></div>
-          <div style={{ height:4,borderRadius:2,background:"rgba(255,255,255,.04)",marginTop:5,overflow:"hidden" }}><div style={{ height:"100%",borderRadius:2,background:"linear-gradient(90deg,#00e676,#00c853)",width:(log.length/RXN.length*100)+"%" }} /></div>
+          <div style={{ height:4,borderRadius:2,background:T.surfaceAlt,marginTop:5,overflow:"hidden" }}><div style={{ height:"100%",borderRadius:2,background:"linear-gradient(90deg,#00e676,#00c853)",width:(log.length/RXN.length*100)+"%" }} /></div>
         </div>
-        {RXN.map(function(r,ri) {
+
+        <div style={{ display:"flex",gap:4,marginBottom:8,justifyContent:"center" }}>
+          {["all","discovered","locked"].map(function(f) {
+            return <button key={f} onClick={function(){setLogFilter(f)}} style={{ padding:"4px 10px",borderRadius:12,fontSize:11,fontWeight:700,fontFamily:"inherit",background:logFilter===f?"rgba(0,230,118,.15)":T.surfaceAlt,border:"1px solid "+(logFilter===f?"#00e676":T.borderSoft),color:logFilter===f?"#00e676":T.textDim,cursor:"pointer" }}>{f.toUpperCase()}</button>;
+          })}
+        </div>
+
+        {RXN.filter(function(r) {
           var key = r.r.slice().sort().join("+");
           var found = log.indexOf(key) !== -1;
-          return <div key={ri} style={{ display:"flex",alignItems:"center",gap:5,padding:"5px 7px",marginBottom:2,background:found?"rgba(0,230,118,.04)":"rgba(255,255,255,.01)",border:"1px solid "+(found?"rgba(0,230,118,.08)":"rgba(255,255,255,.02)"),borderRadius:5,opacity:found?1:0.3 }}>
-            <span style={{ fontSize:13 }}>{found?"✅":"🔒"}</span>
-            <div style={{ flex:1 }}><div style={{ fontSize:11,fontWeight:700,color:found?T.text:T.textMute }}>{found?r.name:"???"}</div></div>
-            {found && <span style={{ fontSize:10,color:"#00e676",fontWeight:700 }}>{r.score}</span>}
+          if (logFilter === "discovered") return found;
+          if (logFilter === "locked") return !found;
+          return true;
+        }).map(function(r,ri) {
+          var key = r.r.slice().sort().join("+");
+          var found = log.indexOf(key) !== -1;
+          return <div key={ri} onClick={function(){if(found){setViewLogItem(r);playBeep("tick");}}} style={{ display:"flex",alignItems:"center",gap:6,padding:"7px 9px",marginBottom:3,background:found?"rgba(0,230,118,.05)":T.surfaceAlt,border:"1px solid "+(found?"rgba(0,230,118,.15)":T.borderSoft),borderRadius:6,cursor:found?"pointer":"default",opacity:found?1:0.35 }}>
+            <span style={{ fontSize:14 }}>{found?"✅":"🔒"}</span>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:12,fontWeight:700,color:found?T.text:T.textMute }}>{found?r.name:"???"}</div>
+              {found && <div style={{ fontSize:10,color:T.textDim }}>{r.eq}</div>}
+            </div>
+            {found && <span style={{ fontSize:11,color:"#00e676",fontWeight:800 }}>{r.score} pts</span>}
           </div>;
         })}
       </div>}
@@ -1486,12 +2067,13 @@ function LabCraft(props) {
       {tab === "challenge" && <div style={{ padding:14 }}>
         <div style={{ textAlign:"center",marginBottom:10 }}>
           <div style={{ fontSize:22,fontWeight:900,color:"#ffd700" }}>{cDone.length}<span style={{ fontSize:14,color:T.textMute }}>/{CHALLENGES.length}</span></div>
+          <p style={{ fontSize:11,color:T.textDim,marginTop:2 }}>Complete lab quests by synthesizing target reactions!</p>
         </div>
         {CHALLENGES.map(function(ch) {
           var s = cDone.indexOf(ch.id) !== -1;
-          return <div key={ch.id} style={{ display:"flex",alignItems:"center",gap:6,padding:"7px 9px",marginBottom:3,background:s?"rgba(255,215,0,.05)":"rgba(255,255,255,.02)",border:"1px solid "+(s?"rgba(255,215,0,.1)":"rgba(255,255,255,.04)"),borderRadius:7 }}>
-            <span style={{ fontSize:17 }}>{s?"🏆":"🎯"}</span>
-            <div><div style={{ fontSize:12,fontWeight:700,color:s?"#ffd700":T.text }}>{ch.text}</div><div style={{ fontSize:9,color:T.textMute }}>{s?"Done!":"Go to Lab"}</div></div>
+          return <div key={ch.id} style={{ display:"flex",alignItems:"center",gap:8,padding:"8px 10px",marginBottom:4,background:s?"rgba(255,215,0,.06)":T.surfaceAlt,border:"1px solid "+(s?"rgba(255,215,0,.2)":T.borderSoft),borderRadius:8 }}>
+            <span style={{ fontSize:18 }}>{s?"🏆":"🎯"}</span>
+            <div style={{ flex:1 }}><div style={{ fontSize:12,fontWeight:700,color:s?"#ffd700":T.text }}>{ch.text}</div><div style={{ fontSize:10,color:T.textMute }}>{s?"Quest Completed!":"Go to Lab and mix chemicals"}</div></div>
           </div>;
         })}
       </div>}
@@ -1499,18 +2081,19 @@ function LabCraft(props) {
       {tab === "badges" && <div style={{ padding:14 }}>
         <div style={{ textAlign:"center",marginBottom:10 }}>
           <div style={{ fontSize:22,fontWeight:900,color:"#ffd700" }}>{earnedAch.length}<span style={{ fontSize:14,color:T.textMute }}>/{ACHIEVEMENTS.length}</span></div>
+          <p style={{ fontSize:11,color:T.textDim,marginTop:2 }}>Unlock badges by making discoveries and mastering chemistry.</p>
         </div>
         {ACHIEVEMENTS.map(function(a) {
           var earned = a.check(log);
-          return <div key={a.id} style={{ display:"flex",alignItems:"center",gap:8,padding:"8px 10px",marginBottom:3,background:earned?"rgba(255,215,0,.06)":"rgba(255,255,255,.015)",border:"1px solid "+(earned?"rgba(255,215,0,.15)":"rgba(255,255,255,.03)"),borderRadius:8,opacity:earned?1:0.4 }}>
-            <span style={{ fontSize:22 }}>{earned?a.icon:"🔒"}</span>
+          return <div key={a.id} style={{ display:"flex",alignItems:"center",gap:10,padding:"9px 12px",marginBottom:4,background:earned?"rgba(255,215,0,.06)":T.surfaceAlt,border:"1px solid "+(earned?"rgba(255,215,0,.2)":T.borderSoft),borderRadius:8,opacity:earned?1:0.4 }}>
+            <span style={{ fontSize:24 }}>{earned?a.icon:"🔒"}</span>
             <div><div style={{ fontSize:13,fontWeight:700,color:earned?"#ffd700":T.textDim }}>{a.title}</div><div style={{ fontSize:11,color:T.textDim }}>{a.desc}</div></div>
           </div>;
         })}
       </div>}
 
       {tab === "stats" && <div style={{ padding:14 }}>
-        <div style={{ fontSize:17,color:"#ffd700",fontWeight:700,marginBottom:10,textAlign:"center" }}>YOUR STATS</div>
+        <div style={{ fontSize:16,color:"#ffd700",fontWeight:800,marginBottom:10,textAlign:"center" }}>YOUR LABORATORY STATS</div>
         <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6,marginBottom:14 }}>
           <div style={{ background:"rgba(0,230,118,.06)",border:"1px solid rgba(0,230,118,.15)",borderRadius:10,padding:12,textAlign:"center" }}>
             <div style={{ fontSize:24,fontWeight:900,color:"#00e676" }}>{totalScore}</div>
@@ -1525,40 +2108,38 @@ function LabCraft(props) {
             <div style={{ fontSize:10,color:T.textDim }}>BADGES</div>
           </div>
         </div>
-        <div style={{ background:"rgba(255,255,255,.02)",border:"1px solid rgba(255,255,255,.05)",borderRadius:10,padding:12,marginBottom:12 }}>
-          <div style={{ fontSize:13,fontWeight:700,color:"#ffd700",marginBottom:6 }}>TIMED CHALLENGE</div>
-          <div style={{ fontSize:12,color:T.text,marginBottom:8 }}>Find as many reactions in 60 seconds!</div>
-          {timedBest !== null && <div style={{ fontSize:15,color:"#00e676",fontWeight:700,marginBottom:8 }}>Best: {timedBest} reactions</div>}
+
+        <div style={{ background:T.surfaceAlt,border:"1px solid "+T.borderSoft,borderRadius:10,padding:12,marginBottom:12 }}>
+          <div style={{ fontSize:13,fontWeight:700,color:"#ffd700",marginBottom:4 }}>⏱️ 60-SECOND SPEED CHALLENGE</div>
+          <div style={{ fontSize:12,color:T.text,marginBottom:8 }}>Find as many reactions as you can before the clock expires!</div>
+          {timedBest !== null && <div style={{ fontSize:14,color:"#00e676",fontWeight:700,marginBottom:8 }}>Personal Best: {timedBest} reactions in 60s</div>}
           {!timedActive && <button onClick={function(){startTimed();setTab("lab")}} style={{ width:"100%",padding:10,background:"linear-gradient(135deg,#ffd700,#ff9100)",border:"none",borderRadius:8,fontSize:14,fontWeight:800,color:"#000",cursor:"pointer",fontFamily:"inherit" }}>START 60s CHALLENGE</button>}
         </div>
-        <div style={{ fontSize:12,fontWeight:700,color:T.textDim,marginBottom:6 }}>TOP SCORES</div>
-        {RXN.filter(function(r){return log.indexOf(r.r.slice().sort().join("+"))!==-1}).sort(function(a,b){return b.score-a.score}).slice(0,10).map(function(r,i) {
-          return <div key={i} style={{ display:"flex",alignItems:"center",gap:6,padding:"5px 8px",marginBottom:2,background:"rgba(255,255,255,.02)",borderRadius:5 }}>
-            <span style={{ fontSize:13,fontWeight:900,color:i===0?"#ffd700":i===1?T.text:T.textDim,width:16 }}>#{i+1}</span>
+
+        <div style={{ background:T.surfaceAlt,border:"1px solid "+T.borderSoft,borderRadius:10,padding:12,marginBottom:14 }}>
+          <div style={{ fontSize:13,fontWeight:700,color:"#ef5350",marginBottom:4 }}>RESET LABORATORY DATA</div>
+          <p style={{ fontSize:11,color:T.textDim,marginBottom:8 }}>Reset your discovered reactions and start afresh.</p>
+          <button onClick={resetProgress} style={{ padding:"8px 14px",background:"rgba(255,80,80,.1)",border:"1px solid rgba(255,80,80,.3)",borderRadius:6,color:"#ef5350",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit" }}>RESET PROGRESS</button>
+        </div>
+
+        <div style={{ fontSize:12,fontWeight:700,color:T.textDim,marginBottom:6 }}>TOP DISCOVERIES</div>
+        {RXN.filter(function(r){return log.indexOf(r.r.slice().sort().join("+"))!==-1}).sort(function(a,b){return b.score-a.score}).slice(0,8).map(function(r,i) {
+          return <div key={i} style={{ display:"flex",alignItems:"center",gap:6,padding:"6px 8px",marginBottom:2,background:T.surfaceAlt,borderRadius:5 }}>
+            <span style={{ fontSize:12,fontWeight:900,color:i===0?"#ffd700":i===1?T.text:T.textDim,width:16 }}>#{i+1}</span>
             <span style={{ flex:1,fontSize:11,color:T.text }}>{r.name}</span>
             <span style={{ fontSize:12,fontWeight:700,color:"#00e676" }}>{r.score}</span>
           </div>;
         })}
-        {log.length === 0 && <div style={{ textAlign:"center",color:T.textMute,fontSize:13,padding:20 }}>No reactions yet! Go experiment!</div>}
+        {log.length === 0 && <div style={{ textAlign:"center",color:T.textMute,fontSize:13,padding:20 }}>No reactions yet! Go experiment in the Lab!</div>}
       </div>}
+
+      {/* Discovered Reaction Modal */}
+      {viewLogItem && <ReactionModal rxn={viewLogItem} T={T} onClose={function(){setViewLogItem(null)}} />}
     </div>
   );
 }
 
-var CSS = [
-  "*{box-sizing:border-box;margin:0;padding:0}",
-  "body{margin:0;background:#060710}",
-  "button:active{transform:scale(.97)}",
-  "@keyframes popIn{0%{transform:scale(.7);opacity:0}100%{transform:scale(1);opacity:1}}",
-  "@keyframes fadeUp{0%{transform:translateY(16px);opacity:0}100%{transform:translateY(0);opacity:1}}",
-  "@keyframes shake{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}",
-  "@keyframes hintPulse{0%,100%{box-shadow:0 0 0 0 rgba(0,230,118,0)}50%{box-shadow:0 0 0 4px rgba(0,230,118,.15)}}",
-  "@keyframes slideDown{0%{transform:translate(-50%,-30px);opacity:0}100%{transform:translate(-50%,0);opacity:1}}",
-  "::-webkit-scrollbar{display:none}",
-].join("\n");
-
-
-/* ═══ MAIN MENU + APP SHELL ═══ */
+/* ═══ MAIN MENU ═══ */
 function MainMenu(props) {
   var isLight = props.theme === "light";
   var bgGrad = isLight
@@ -1575,12 +2156,12 @@ function MainMenu(props) {
 
       <div style={{ fontSize:78,animation:"float 2.4s ease-in-out infinite",filter:"drop-shadow(0 0 22px rgba(0,230,118,.55))" }}>⚗️</div>
       <div style={{ marginTop:20,fontSize:28,fontWeight:900,letterSpacing:4,color:"#00e676",textShadow:"0 0 16px rgba(0,230,118,.6)",textAlign:"center" }}>LAB CRAFT</div>
-      <div style={{ marginTop:6,fontSize:14,letterSpacing:3,color:subColor }}>MIX • REACT • DISCOVER</div>
+      <div style={{ marginTop:6,fontSize:13,letterSpacing:3,color:subColor }}>MIX • REACT • DISCOVER</div>
 
       <button
         onClick={props.onPlay}
         style={{
-          marginTop:54,padding:"18px 64px",
+          marginTop:48,padding:"18px 64px",
           background:"linear-gradient(135deg,#00e676,#00b248)",
           border:"none",borderRadius:14,
           fontSize:18,fontWeight:900,letterSpacing:3,color:"#000",
@@ -1589,7 +2170,9 @@ function MainMenu(props) {
         }}
       >▶ PLAY</button>
 
-      <div style={{ marginTop:48,fontSize:12,color:footColor,letterSpacing:2 }}>v1.0 • 118 elements • 100+ reactions</div>
+      <div style={{ marginTop:44,fontSize:11,color:footColor,letterSpacing:1,textAlign:"center" }}>
+        v2.0 • 118 Elements • 44+ Reactions • Offline Ready
+      </div>
     </div>
   );
 }
@@ -1605,25 +2188,30 @@ function LoadingDialog(props) {
 }
 
 function App() {
-  const [screen, setScreen] = useState("menu"); // "menu" | "loading" | "lab"
-  const [theme, setTheme] = useState("dark");
+  const [screen, setScreen] = useState("menu");
+  const [theme, setTheme] = useState(function() {
+    try {
+      return localStorage.getItem("labcraft_v2_theme") || "dark";
+    } catch(e) { return "dark"; }
+  });
+
+  useEffect(function() {
+    try { localStorage.setItem("labcraft_v2_theme", theme); } catch(e){}
+  }, [theme]);
+
   const screenRef = useRef(screen);
   useEffect(function() { screenRef.current = screen; }, [screen]);
 
-  // Lowest-priority back handler: lab → menu, menu → exit
   useEffect(function() {
     return window.pushBackHandler(function() {
       var s = screenRef.current;
       if (s === "lab") { setScreen("menu"); return true; }
-      // On menu (or loading): let the native exit happen
       return false;
     });
   }, []);
 
   const handlePlay = useCallback(function() {
     setScreen("loading");
-    // Defer mount so the loading dialog actually paints before the heavy
-    // LabCraft component initializes (it builds 118 elements + reactions).
     setTimeout(function() {
       setScreen("lab");
     }, 50);
@@ -1634,11 +2222,9 @@ function App() {
   return <LabCraft theme={theme} setTheme={setTheme} />;
 }
 
-// Mount the app
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(React.createElement(App));
 
 </script>
-
 </body>
 </html>

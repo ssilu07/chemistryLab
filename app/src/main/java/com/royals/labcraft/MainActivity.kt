@@ -2,6 +2,8 @@ package com.royals.labcraft
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.WindowManager
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
@@ -13,9 +15,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
+import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.interstitial.InterstitialAd
@@ -26,6 +30,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private lateinit var bannerAdView: AdView
     private var interstitialAd: InterstitialAd? = null
+    private var isAdLoading = false
+    private val handler = Handler(Looper.getMainLooper())
 
     inner class WebAppInterface {
         @JavascriptInterface
@@ -37,11 +43,33 @@ class MainActivity : AppCompatActivity() {
         @JavascriptInterface
         fun showInterstitialAd() {
             runOnUiThread {
-                interstitialAd?.let {
-                    it.show(this@MainActivity)
-                    interstitialAd = null
+                if (interstitialAd != null) {
+                    interstitialAd?.show(this@MainActivity)
+                } else {
                     loadInterstitialAd()
                 }
+            }
+        }
+
+        /** Call from JS: window.Android.vibrate(ms) */
+        @JavascriptInterface
+        fun vibrate(milliseconds: Long) {
+            runOnUiThread {
+                try {
+                    val vibrator = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                        val vibratorManager = getSystemService(android.content.Context.VIBRATOR_MANAGER_SERVICE) as? android.os.VibratorManager
+                        vibratorManager?.defaultVibrator
+                    } else {
+                        @Suppress("DEPRECATION")
+                        getSystemService(android.content.Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                    }
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        vibrator?.vibrate(android.os.VibrationEffect.createOneShot(milliseconds.coerceIn(1L, 1000L), android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+                    } else {
+                        @Suppress("DEPRECATION")
+                        vibrator?.vibrate(milliseconds.coerceIn(1L, 1000L))
+                    }
+                } catch (_: Exception) {}
             }
         }
     }
@@ -115,16 +143,45 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadInterstitialAd() {
+        if (isAdLoading || interstitialAd != null) return
+        isAdLoading = true
+
+        val adRequest = AdRequest.Builder().build()
         InterstitialAd.load(
             this,
             BuildConfig.INTERSTITIAL_AD_UNIT_ID,
-            AdRequest.Builder().build(),
+            adRequest,
             object : InterstitialAdLoadCallback() {
                 override fun onAdLoaded(ad: InterstitialAd) {
                     interstitialAd = ad
+                    isAdLoading = false
+
+                    ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+                        override fun onAdDismissedFullScreenContent() {
+                            interstitialAd = null
+                            loadInterstitialAd()
+                        }
+
+                        override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                            interstitialAd = null
+                            loadInterstitialAd()
+                        }
+
+                        override fun onAdShowedFullScreenContent() {
+                            interstitialAd = null
+                        }
+                    }
                 }
+
                 override fun onAdFailedToLoad(error: LoadAdError) {
                     interstitialAd = null
+                    isAdLoading = false
+                    // Retry after 15 seconds if failed (e.g. temporary network drop)
+                    handler.postDelayed({
+                        if (!isFinishing && !isDestroyed) {
+                            loadInterstitialAd()
+                        }
+                    }, 15000)
                 }
             }
         )
@@ -150,6 +207,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        handler.removeCallbacksAndMessages(null)
         bannerAdView.destroy()
         webView.destroy()
         super.onDestroy()
