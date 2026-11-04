@@ -3483,6 +3483,7 @@ function StuffedMoleStudio(props) {
       playBeep("achievement");
       triggerConfettiBurst();
       showToastMsg("✨ Saved as your official Lab Mascot!");
+      maybeShowInterstitial(false);
     } catch(e) {}
   }
 
@@ -3499,6 +3500,7 @@ function StuffedMoleStudio(props) {
       }
       playBeep("tick");
       triggerConfettiBurst();
+      maybeShowInterstitial(false);
     } catch(e) {}
   }
 
@@ -3578,6 +3580,9 @@ function StuffedMoleStudio(props) {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(blobURL);
+        setTimeout(function() {
+          maybeShowInterstitial(true);
+        }, 600);
       };
       img.src = blobURL;
     } catch(err) {
@@ -4038,6 +4043,7 @@ function MoleDrawingStudio(props) {
     } catch(e) {}
     playBeep("mole_celebrate");
     triggerConfettiBurst();
+    maybeShowInterstitial(false);
   }
 
   function downloadUserDrawing(url) {
@@ -4047,6 +4053,9 @@ function MoleDrawingStudio(props) {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    setTimeout(function() {
+      maybeShowInterstitial(true);
+    }, 500);
   }
 
   function deleteDrawing(idx) {
@@ -4351,7 +4360,7 @@ function MoleChemistryLab(props) {
           return (
             <button
               key={s.formula}
-              onClick={function() { setSubIndex(idx); setCustomMass(null); setCustomFormula(""); playBeep("tick"); }}
+              onClick={function() { setSubIndex(idx); setCustomMass(null); setCustomFormula(""); playBeep("tick"); maybeShowInterstitial(false); }}
               style={{
                 flexShrink: 0, padding: "5px 10px", borderRadius: 8, fontSize: 11, fontWeight: 800,
                 background: on ? "rgba(0,230,118,.15)" : T.surfaceAlt,
@@ -4750,6 +4759,7 @@ function MoleProjectsGallery(props) {
       localStorage.setItem("labcraft_mole_bookmarks", JSON.stringify(next));
     } catch(e) {}
     playBeep("tick");
+    maybeShowInterstitial(false);
   }
 
   return (
@@ -4865,7 +4875,7 @@ function MoleProjectsGallery(props) {
               {/* View / Hide Details Button */}
               <div style={{ marginTop: 8, display: "flex", justifyContent: "flex-end" }}>
                 <button
-                  onClick={function() { setExpandedId(isExpanded ? null : item.id); playBeep("tick"); }}
+                  onClick={function() { setExpandedId(isExpanded ? null : item.id); playBeep("tick"); maybeShowInterstitial(false); }}
                   style={{
                     padding: "4px 10px", borderRadius: 6, fontSize: 10, fontWeight: 800,
                     background: isExpanded ? "rgba(0,230,118,.15)" : T.surfaceAlt,
@@ -4962,6 +4972,9 @@ function MoleDayPartyView(props) {
     try {
       localStorage.setItem("labcraft_mole_celebrated", "true");
     } catch(e) {}
+    setTimeout(function() {
+      maybeShowInterstitial(true);
+    }, 700);
   }
 
   return (
@@ -5106,7 +5119,7 @@ function MoleHubView(props) {
           return (
             <button
               key={idx}
-              onClick={function() { setSubTab(k.tab); playBeep("tick"); }}
+              onClick={function() { setSubTab(k.tab); playBeep("tick"); maybeShowInterstitial(false); }}
               style={{
                 padding: "2px 8px", borderRadius: 12, fontSize: 9.5, fontWeight: 700,
                 background: subTab === k.tab ? "rgba(255,64,129,.18)" : T.surfaceAlt,
@@ -5128,7 +5141,7 @@ function MoleHubView(props) {
           return (
             <button
               key={t.id}
-              onClick={function() { setSubTab(t.id); playBeep("tick"); }}
+              onClick={function() { setSubTab(t.id); playBeep("tick"); maybeShowInterstitial(false); }}
               style={{
                 flex: 1, minWidth: 64, padding: "7px 2px", borderRadius: 12, fontSize: 11, fontWeight: 800,
                 cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
