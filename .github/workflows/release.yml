@@ -174,12 +174,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check Google Play Configuration
+        env:
+          PLAY_JSON: ${{ secrets.PLAY_STORE_JSON_KEY || secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
-          if [ -n "${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}" ]; then
+          if [ -n "$PLAY_JSON" ]; then
             echo "Google Play credentials found."
             echo "HAVE_PLAY_SECRET=true" >> $GITHUB_ENV
           else
-            echo "No PLAY_SERVICE_ACCOUNT_JSON secret found. Skipping Play Store upload."
+            echo "No PLAY_STORE_JSON_KEY or PLAY_SERVICE_ACCOUNT_JSON secret found. Skipping Play Store upload."
             echo "HAVE_PLAY_SECRET=false" >> $GITHUB_ENV
           fi
 
@@ -187,7 +189,7 @@ jobs:
         if: env.SHOULD_RELEASE == 'true' && env.HAVE_PLAY_SECRET == 'true'
         uses: r0adkll/upload-google-play@v1
         with:
-          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_JSON_KEY || secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.royals.labcraft
           releaseFiles: release_assets/ChemistryLab-*.aab
           track: ${{ inputs.play_track || vars.PLAY_TRACK || 'internal' }}
