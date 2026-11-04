@@ -8,4 +8,12 @@ build/
 app/build/
 *.bak
 app/release/
+release-outputs/
+releases/
+*.jks
+*.keystore
+keystore.jks
+secrets.properties
+keystore-base64.txt
+
 

@@ -11,7 +11,7 @@ android {
         applicationId "com.royals.labcraft"
         minSdk 24
         targetSdk 36
-        versionCode 11
+        versionCode 12
         versionName "2.3"
     }
 
@@ -21,10 +21,17 @@ android {
 
     signingConfigs {
         release {
-            storeFile file("D:/java/Key/labcraft.jks")
-            storePassword "8750257510"
-            keyAlias "key0"
-            keyPassword "8750257510"
+            def ksPath = System.getenv("KEYSTORE_FILE") ?: (project.hasProperty("KEYSTORE_FILE") ? project.property("KEYSTORE_FILE") : "D:/java/Key/labcraft.jks")
+            def ksPass = System.getenv("KEYSTORE_PASSWORD") ?: (project.hasProperty("KEYSTORE_PASSWORD") ? project.property("KEYSTORE_PASSWORD") : "8750257510")
+            def kAlias = System.getenv("KEY_ALIAS") ?: (project.hasProperty("KEY_ALIAS") ? project.property("KEY_ALIAS") : "key0")
+            def kPass = System.getenv("KEY_PASSWORD") ?: (project.hasProperty("KEY_PASSWORD") ? project.property("KEY_PASSWORD") : "8750257510")
+
+            if (file(ksPath).exists()) {
+                storeFile file(ksPath)
+                storePassword ksPass
+                keyAlias kAlias
+                keyPassword kPass
+            }
         }
     }
 
@@ -36,7 +43,11 @@ android {
             buildConfigField "String", "INTERSTITIAL_AD_UNIT_ID", '"ca-app-pub-3940256099942544/1033173712"'
         }
         release {
-            signingConfig signingConfigs.release
+            if (signingConfigs.release.storeFile != null && signingConfigs.release.storeFile.exists()) {
+                signingConfig signingConfigs.release
+            } else {
+                signingConfig signingConfigs.debug
+            }
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             manifestPlaceholders = [admobAppId: "ca-app-pub-1811294933992844~6690229137"]

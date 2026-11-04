@@ -89,6 +89,60 @@ Then update `index.html` to use local paths:
 <script src="babel.min.js"></script>
 ```
 
+## 🚀 Automated Build & Release (CI/CD)
+
+The app is fully configured for **automated building, signing, and releasing** both locally and in the cloud via GitHub Actions.
+
+### 🌐 Method 1: Cloud Automation via GitHub Actions (Zero Local Setup)
+Whenever you want to release a new version:
+1. **Option A (Automatic via Git Tag)**:
+   ```bash
+   git tag v2.4
+   git push origin v2.4
+   ```
+   GitHub Actions will automatically build signed `.apk` and `.aab` files, create an official GitHub Release, and attach the download links!
+
+2. **Option B (1-Click UI via GitHub)**:
+   - Go to your repository on GitHub: `https://github.com/ssilu07/chemistryLab`
+   - Click the **Actions** tab.
+   - Select **Build & Release Android App** on the left.
+   - Click **Run workflow** -> **Run workflow**.
+
+3. **Setting Up Production Signing Secrets (1-Minute Setup)**:
+   Run the helper script on your PC:
+   ```powershell
+   .\scripts\export-keystore-secret.ps1
+   ```
+   This will automatically copy your keystore to your clipboard! Then:
+   - Go to [GitHub Repository Secrets](https://github.com/ssilu07/chemistryLab/settings/secrets/actions)
+   - Add:
+     - `KEYSTORE_BASE64`: Paste your clipboard (Ctrl+V)
+     - `KEYSTORE_PASSWORD`: `8750257510`
+     - `KEY_ALIAS`: `key0`
+     - `KEY_PASSWORD`: `8750257510`
+
+---
+
+### 💻 Method 2: Local 1-Click Release Script
+Run the automated release script on your PC:
+- **Windows Double-Click**: Double-click [release.bat](file:///d:/htmlgames/ChemistryLab/release.bat)
+- **PowerShell**:
+  ```powershell
+  # Interactive mode (asks whether to bump version):
+  .\scripts\release.ps1
+
+  # Or automatic bump:
+  .\scripts\release.ps1 -Bump minor
+  ```
+**What it does automatically:**
+1. Auto-increments `versionCode` and `versionName` in `app/build.gradle`.
+2. Compiles and signs both **Release APK** (for direct install) and **Release AAB** (for Play Store).
+3. Renames and packages outputs with version number into `release-outputs/v<version>/`.
+4. Generates SHA256 integrity checksums.
+5. Commits to git, creates a git tag, and pushes to GitHub (which triggers the GitHub Release online).
+
+---
+
 ## Features
 
 - 🧪 24 chemicals with real properties
