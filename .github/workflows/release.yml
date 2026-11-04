@@ -69,7 +69,7 @@ jobs:
           echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
           echo "Found Version: Name=$VERSION_NAME, Code=$VERSION_CODE, Tag=$RELEASE_TAG"
 
-      - name: Decode Keystore (if Secret exists)
+      - name: Decode Keystore (or generate fallback)
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -85,7 +85,12 @@ jobs:
             echo "KEY_PASSWORD=${KEY_PASSWORD:-8750257510}" >> $GITHUB_ENV
             echo "Keystore successfully configured for signing."
           else
-            echo "Note: KEYSTORE_BASE64 secret is not set. The build will use project fallback or debug signing."
+            echo "KEYSTORE_BASE64 secret not found. Generating temporary signing key for CI..."
+            keytool -genkey -v -keystore "$GITHUB_WORKSPACE/keystore.jks" -alias key0 -keyalg RSA -keysize 2048 -validity 10000 -storepass 8750257510 -keypass 8750257510 -dname "CN=ChemistryLab, OU=Dev, O=ChemLab, L=City, S=State, C=US"
+            echo "KEYSTORE_FILE=$GITHUB_WORKSPACE/keystore.jks" >> $GITHUB_ENV
+            echo "KEYSTORE_PASSWORD=8750257510" >> $GITHUB_ENV
+            echo "KEY_ALIAS=key0" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=8750257510" >> $GITHUB_ENV
           fi
 
       - name: Build Release APK and AAB
