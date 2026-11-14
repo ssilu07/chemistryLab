@@ -1,6 +1,7 @@
 package com.royals.labcraft
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -15,6 +16,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.content.FileProvider
+import android.util.Base64
+import java.io.File
+import java.io.FileOutputStream
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
@@ -70,6 +75,88 @@ class MainActivity : AppCompatActivity() {
                         vibrator?.vibrate(milliseconds.coerceIn(1L, 1000L))
                     }
                 } catch (_: Exception) {}
+            }
+        }
+
+        /** Call from JS: window.Android.shareText(text, title) */
+        @JavascriptInterface
+        fun shareText(text: String, title: String? = null) {
+            runOnUiThread {
+                try {
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, text)
+                        if (!title.isNullOrEmpty()) {
+                            putExtra(Intent.EXTRA_SUBJECT, title)
+                        }
+                    }
+                    val chooser = Intent.createChooser(intent, title ?: "Share via")
+                    chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(chooser)
+                } catch (_: Exception) {}
+            }
+        }
+
+        /** Call from JS: window.Android.isNativeSharingSupported() */
+        @JavascriptInterface
+        fun isNativeSharingSupported(): Boolean = true
+
+        /** Call from JS: window.Android.shareImage(base64Data, caption, title) */
+        @JavascriptInterface
+        fun shareImage(base64Data: String, caption: String? = null, title: String? = null) {
+            runOnUiThread {
+                try {
+                    val cleanBase64 = if (base64Data.contains(",")) {
+                        base64Data.substringAfter(",")
+                    } else {
+                        base64Data
+                    }
+                    val imageBytes = Base64.decode(cleanBase64, Base64.DEFAULT)
+                    val imagesDir = File(cacheDir, "images")
+                    if (!imagesDir.exists()) {
+                        imagesDir.mkdirs()
+                    }
+
+                    // Housekeeping: remove old cached share images if > 8 files
+                    val existing = imagesDir.listFiles()
+                    if (existing != null && existing.size > 8) {
+                        existing.sortBy { it.lastModified() }
+                        for (i in 0 until (existing.size - 5)) {
+                            existing[i].delete()
+                        }
+                    }
+
+                    val imageFile = File(imagesDir, "scientist_id_${System.currentTimeMillis()}.png")
+                    FileOutputStream(imageFile).use { fos ->
+                        fos.write(imageBytes)
+                        fos.flush()
+                    }
+
+                    val authority = "${applicationContext.packageName}.fileprovider"
+                    val contentUri = FileProvider.getUriForFile(this@MainActivity, authority, imageFile)
+
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "image/png"
+                        putExtra(Intent.EXTRA_STREAM, contentUri)
+                        if (!caption.isNullOrEmpty()) {
+                            putExtra(Intent.EXTRA_TEXT, caption)
+                        }
+                        if (!title.isNullOrEmpty()) {
+                            putExtra(Intent.EXTRA_SUBJECT, title)
+                        }
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+
+                    val chooser = Intent.createChooser(intent, title ?: "Share Mad Scientist ID")
+                    chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    startActivity(chooser)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    // Fallback to text share if image creation fails
+                    if (!caption.isNullOrEmpty()) {
+                        shareText(caption, title)
+                    }
+                }
             }
         }
     }

@@ -16,5 +16,7 @@ keystore.jks
 secrets.properties
 keystore-base64.txt
 service-account.json
+stitch_*
+interactive_lab_simulator.html
 
 

@@ -196,7 +196,7 @@ jobs:
           serviceAccountJson: ${{ github.workspace }}/service-account.json
           packageName: com.royals.labcraft
           releaseFiles: release_assets/ChemistryLab-*.aab
-          track: ${{ inputs.play_track || vars.PLAY_TRACK || 'internal' }}
+          track: ${{ inputs.play_track || vars.PLAY_TRACK || 'production' }}
           mappingFile: app/build/outputs/mapping/release/mapping.txt
           status: completed
 
