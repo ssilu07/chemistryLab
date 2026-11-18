@@ -191,17 +191,44 @@ function triggerHaptic(type) {
   } catch(e) {}
 }
 
-var _lastAdTime = Date.now();
+var _lastAdTime = 0;
 var _reactionsSinceAd = 0;
+var _sessionStartTime = Date.now();
+function isProUnlocked() {
+  try {
+    if (window._labCraftIsPro) return true;
+    if (window.Android && typeof window.Android.isProUser === "function") {
+      return !!window.Android.isProUser();
+    }
+  } catch(e) {}
+  return false;
+}
+function preloadInterstitial() {
+  if (isProUnlocked()) return;
+  if (window.Android && typeof window.Android.preloadInterstitialAd === "function") {
+    try {
+      window.Android.preloadInterstitialAd();
+    } catch(e) {}
+  }
+}
 function maybeShowInterstitial(force) {
+  if (isProUnlocked()) return;
   _reactionsSinceAd++;
   var now = Date.now();
-  if (force || (_reactionsSinceAd >= 3 && now - _lastAdTime > 35000)) {
+  if (_reactionsSinceAd === 1) {
+    preloadInterstitial();
+  }
+  var minSessionElapsed = (now - _sessionStartTime) > 25000;
+  var cooldownElapsed = _lastAdTime === 0 ? minSessionElapsed : (now - _lastAdTime > 45000);
+  var forceCooldownOk = _lastAdTime === 0 ? minSessionElapsed : (now - _lastAdTime > 25000);
+  if ((force && forceCooldownOk) || (_reactionsSinceAd >= 3 && cooldownElapsed)) {
     if (window.Android && typeof window.Android.showInterstitialAd === "function") {
       try {
-        window.Android.showInterstitialAd();
-        _lastAdTime = now;
-        _reactionsSinceAd = 0;
+        var shown = window.Android.showInterstitialAd();
+        if (shown) {
+          _lastAdTime = now;
+          _reactionsSinceAd = 0;
+        }
       } catch(e) {}
     }
   }
@@ -6342,7 +6369,7 @@ function CalcAndToolsView(props) {
           return (
             <button
               key={t[0]}
-              onClick={function(){setToolMode(t[0]);playBeep("tick");}}
+              onClick={function(){setToolMode(t[0]);playBeep("tick");maybeShowInterstitial(false);}}
               style={{
                 flex:1,minWidth:70,padding:"7px 2px",borderRadius:12,fontSize:11,fontWeight:800,
                 cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap",
@@ -6410,6 +6437,9 @@ function QuizView(props) {
   }
 
   function handleNext() {
+    if (qIndex === 1) {
+      preloadInterstitial();
+    }
     if (qIndex + 1 < 10) {
       setQIndex(qIndex + 1);
       setSelected(null);
@@ -6661,7 +6691,7 @@ function MegaFXStudioModal(props) {
       setFoamTemp(Math.round(25 + p * (peroxideConc === 30 ? 68 : peroxideConc === 12 ? 38 : 15)));
       if (elapsed >= duration) {
         clearInterval(timer);
-        setTimeout(function(){ setIsFoaming(false); }, 1500);
+        setTimeout(function(){ setIsFoaming(false); maybeShowInterstitial(false); }, 1500);
       }
     }, 40);
   }
@@ -6673,6 +6703,7 @@ function MegaFXStudioModal(props) {
     triggerHaptic("react");
     setTimeout(function() {
       setIsGlowActive(false);
+      maybeShowInterstitial(false);
     }, 5000);
   }
 
@@ -6685,6 +6716,7 @@ function MegaFXStudioModal(props) {
     triggerHaptic("explode");
     setTimeout(function() {
       setIsThermiteIgnited(false);
+      maybeShowInterstitial(false);
     }, 4500);
   }
 
@@ -6699,6 +6731,7 @@ function MegaFXStudioModal(props) {
     }, 700);
     setTimeout(function() {
       setIsAlkaliExploded(false);
+      maybeShowInterstitial(false);
     }, 3500);
   }
 
@@ -7684,6 +7717,7 @@ function MadScientistIDModal(props) {
   // 1-Click Randomize Meme Scientist
   var handleRandomize = function() {
     playBeep("tick");
+    preloadInterstitial();
     var p = SCIENTIST_PRESETS[Math.floor(Math.random() * SCIENTIST_PRESETS.length)];
     setName(p.name);
     setTitle(p.title);
@@ -7719,6 +7753,7 @@ function MadScientistIDModal(props) {
     a.click();
     document.body.removeChild(a);
     showToast("💾 ID Card Image Downloaded!");
+    setTimeout(function() { maybeShowInterstitial(false); }, 600);
   };
 
   // Copy Text Status
@@ -8166,6 +8201,10 @@ function ChemleView(props) {
     setGuesses(next);
     setSearch("");
 
+    if (next.length === 2) {
+      preloadInterstitial();
+    }
+
     var won = el.n === target.n;
     var lost = !won && next.length >= 6;
 
@@ -8201,6 +8240,7 @@ function ChemleView(props) {
   }
 
   function startNewPractice() {
+    maybeShowInterstitial(true);
     var c = EL.filter(function(e) { return e.n <= 92; });
     var nextTarget = c[Math.floor(Math.random() * c.length)];
     setPracticeTarget(nextTarget);
@@ -9080,35 +9120,44 @@ function HeroReactionChamber(props) {
   }, [isFlaming, isNO2, isPurpleVapor, isSmoking, isExothermic, isGasReaction, isBoiling]);
 
   return (
-    <div style={{ background: isDarkRoom ? "#04050a" : "#070913", color: "#e1e1f1", minHeight: "100%", position: "relative", paddingBottom: 68 }} className="bg-cyber-grid">
+    <div style={{ background: isDarkRoom ? "#04050a" : "#070913", color: "#e1e1f1", minHeight: "100%", position: "relative", paddingBottom: 78 }} className="bg-cyber-grid">
       
       {/* ── 1. TOP STATUS BAR ── */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: "rgba(11,14,24,0.9)", borderBottom: "1px solid rgba(0,229,255,0.18)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 40 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 6, background: "rgba(0,229,255,0.12)", border: "1px solid rgba(0,229,255,0.4)", display: "flex", alignItems: "center", justifyContent: "center", color: "#00e5ff", fontSize: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6, padding: "10px 12px", background: "rgba(11,14,24,0.9)", borderBottom: "1px solid rgba(0,229,255,0.18)", backdropFilter: "blur(12px)", position: "sticky", top: 0, zIndex: 40 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1 }}>
+          <div style={{ width: 28, height: 28, flexShrink: 0, borderRadius: 6, background: "rgba(0,229,255,0.12)", border: "1px solid rgba(0,229,255,0.4)", display: "flex", alignItems: "center", justifyContent: "center", color: "#00e5ff", fontSize: 16 }}>
             ⚗️
           </div>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 900, letterSpacing: "0.06em", color: "#c3f5ff", display: "flex", alignItems: "center", gap: 6, fontFamily: "inherit" }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 900, letterSpacing: "0.05em", color: "#c3f5ff", display: "flex", alignItems: "center", gap: 5, fontFamily: "inherit", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               <span>LAB CRAFT</span>
-              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>// KINETICS LAB v3.4</span>
+              <span style={{ fontSize: 9, color: "rgba(255,255,255,0.45)", fontWeight: 500 }}>v3.4</span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 9, color: "#00e676", letterSpacing: "0.08em", fontWeight: 700 }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#00e676", boxShadow: "0 0 6px #00e676", display: "inline-block", animation: "pulse 1.4s infinite" }}></span>
-              <span>SIMULATOR ONLINE - 60 FPS</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 9, color: "#00e676", letterSpacing: "0.06em", fontWeight: 700, whiteSpace: "nowrap" }}>
+              <span style={{ width: 6, height: 6, flexShrink: 0, borderRadius: "50%", background: "#00e676", boxShadow: "0 0 6px #00e676", display: "inline-block", animation: "pulse 1.4s infinite" }}></span>
+              <span>{props.isPro ? "PRO AD-FREE LAB" : "SIMULATOR ONLINE"}</span>
             </div>
           </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <button onClick={function(){ setShowScientistID(true); playBeep("tick"); }} style={{ padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 800, background: "rgba(0,229,255,0.12)", border: "1px solid rgba(0,229,255,0.4)", color: "#00e5ff", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+          <button onClick={function(){ setShowScientistID(true); playBeep("tick"); }} style={{ padding: "5px 7px", borderRadius: 6, fontSize: 10, fontWeight: 800, background: "rgba(0,229,255,0.12)", border: "1px solid rgba(0,229,255,0.4)", color: "#00e5ff", cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}>
             <span>🪪</span> <span>ID</span>
           </button>
-          <button onClick={function(){ setShowMegaFX(true); playBeep("tick"); }} style={{ padding: "4px 8px", borderRadius: 6, fontSize: 10, fontWeight: 800, background: "rgba(255,23,68,0.15)", border: "1px solid rgba(255,23,68,0.5)", color: "#ff5252", cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}>
+          <button onClick={function(){ setShowMegaFX(true); playBeep("tick"); }} style={{ padding: "5px 7px", borderRadius: 6, fontSize: 10, fontWeight: 800, background: "rgba(255,23,68,0.15)", border: "1px solid rgba(255,23,68,0.5)", color: "#ff5252", cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}>
             <span>💥</span> <span>FX</span>
           </button>
-          <div style={{ padding: "3px 8px", borderRadius: 6, fontSize: 10, fontWeight: 800, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", color: "#c3f5ff" }}>
-            EXP 84%
-          </div>
+          <button
+            onClick={function(){ if (props.onOpenPro) props.onOpenPro(); playBeep("tick"); }}
+            style={{
+              padding: "5px 8px", borderRadius: 6, fontSize: 10, fontWeight: 900, cursor: "pointer",
+              background: props.isPro ? "linear-gradient(135deg,rgba(0,230,118,0.25),rgba(0,229,255,0.2))" : "linear-gradient(135deg,rgba(255,215,0,0.22),rgba(255,145,0,0.2))",
+              border: props.isPro ? "1px solid #00e676" : "1px solid #ffd700",
+              color: props.isPro ? "#00e676" : "#ffd700",
+              display: "flex", alignItems: "center", gap: 3
+            }}
+          >
+            <span>👑</span> <span>{props.isPro ? "VIP" : "PRO"}</span>
+          </button>
         </div>
       </div>
 
@@ -9866,7 +9915,7 @@ function LabCraft(props) {
     }, 2200);
   }
 
-  function startTimed() { setTimedActive(true); setTimedTime(60); setTimedFound([]); clearAll(); }
+  function startTimed() { preloadInterstitial(); setTimedActive(true); setTimedTime(60); setTimedFound([]); clearAll(); }
 
   function resetProgress() {
     if (window.confirm("Are you sure you want to reset all discovered reactions and progress?")) {
@@ -9886,7 +9935,7 @@ function LabCraft(props) {
   };
 
   return (
-    <div style={{ minHeight:"100vh",background:T.bg,fontFamily:"'SF Mono','Fira Code','Courier New',monospace",color:T.text,paddingBottom:40 }}>
+    <div style={{ minHeight:"100vh",background:T.bg,fontFamily:"'SF Mono','Fira Code','Courier New',monospace",color:T.text,paddingBottom:78 }}>
       {newAch && <div style={{ position:"fixed",top:60,left:"50%",transform:"translateX(-50%)",zIndex:200,background:"linear-gradient(135deg,rgba(255,215,0,.18),rgba(255,215,0,.06))",border:"1px solid rgba(255,215,0,.4)",borderRadius:12,padding:"10px 20px",display:"flex",alignItems:"center",gap:10,animation:"slideDown .4s ease-out",backdropFilter:"blur(10px)" }}>
         <span style={{ fontSize:28 }}>{newAch.icon}</span>
         <div><div style={{ fontSize:14,fontWeight:800,color:"#ffd700" }}>Achievement Unlocked!</div><div style={{ fontSize:13,color:T.text }}>{newAch.title}</div></div>
@@ -9894,19 +9943,20 @@ function LabCraft(props) {
 
       {tab !== "lab" && (
         <React.Fragment>
-<header style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 14px",borderBottom:"1px solid "+T.headerBorder,background:T.headerBg,position:"sticky",top:0,zIndex:20,backdropFilter:"blur(12px)" }}>
-        <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-          <span style={{ fontSize:22 }}>{"🧪"}</span>
-          <div>
-            <h1 style={{ fontSize:17,fontWeight:900,margin:0,background:"linear-gradient(90deg,#00e676,#40c4ff)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent" }}>Lab Craft</h1>
-            <p style={{ fontSize:10,color:T.textDim,margin:0 }}>{log.length}/{RXN.length} found • {totalScore} pts • {earnedAch.length} badges</p>
+<header style={{ display:"flex",alignItems:"center",justifyContent:"space-between",gap:6,padding:"8px 12px",borderBottom:"1px solid "+T.headerBorder,background:T.headerBg,position:"sticky",top:0,zIndex:20,backdropFilter:"blur(12px)" }}>
+        <div style={{ display:"flex",alignItems:"center",gap:8,minWidth:0,flex:1 }}>
+          <span style={{ fontSize:20,flexShrink:0 }}>{"🧪"}</span>
+          <div style={{ minWidth:0 }}>
+            <h1 style={{ fontSize:16,fontWeight:900,margin:0,background:"linear-gradient(90deg,#00e676,#40c4ff)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>Lab Craft</h1>
+            <p style={{ fontSize:10,color:T.textDim,margin:0,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>{log.length}/{RXN.length} found • {totalScore} pts</p>
           </div>
         </div>
-        <div style={{ display:"flex",gap:4 }}>
-          <button onClick={function(){setShowScientistID(true);playBeep("tick");}} title="Mad Scientist ID Badge" style={{ ...B(),color:"#00e676",background:"rgba(0,230,118,.1)",borderColor:"rgba(0,230,118,.35)",fontWeight:800 }}>🪪 ID</button>
-          <button onClick={function(){setTheme(theme==="dark"?"light":"dark")}} title="Toggle theme" style={{ ...B(),color:T.isLight?"#ff9100":"#ffd54f",background:T.isLight?"rgba(255,145,0,.08)":"rgba(255,213,79,.08)",borderColor:T.isLight?"rgba(255,145,0,.25)":"rgba(255,213,79,.25)" }}>{T.isLight?"☀":"🌙"}</button>
-          <button onClick={function(){setSoundOn(!soundOn)}} style={{ ...B(),color:soundOn?"#00e676":T.textDim,background:soundOn?"rgba(0,230,118,.08)":T.surfaceAlt }}>{soundOn?"ON":"OFF"}</button>
-          <button onClick={clearAll} style={{ ...B(),color:"#ef5350",borderColor:"rgba(255,80,80,.2)",background:"rgba(255,80,80,.08)" }}>Clear</button>
+        <div style={{ display:"flex",gap:4,flexShrink:0 }}>
+          <button onClick={function(){if(props.onOpenPro)props.onOpenPro();playBeep("tick");}} title="Lab Craft PRO" style={{ ...B("4px 7px"),color:props.isPro?"#00e676":"#ffd700",background:props.isPro?"rgba(0,230,118,.14)":"rgba(255,215,0,.12)",borderColor:props.isPro?"rgba(0,230,118,.45)":"rgba(255,215,0,.45)",fontWeight:900 }}>👑</button>
+          <button onClick={function(){setShowScientistID(true);playBeep("tick");}} title="Mad Scientist ID Badge" style={{ ...B("4px 7px"),color:"#00e676",background:"rgba(0,230,118,.1)",borderColor:"rgba(0,230,118,.35)",fontWeight:800 }}>🪪</button>
+          <button onClick={function(){setTheme(theme==="dark"?"light":"dark")}} title="Toggle theme" style={{ ...B("4px 7px"),color:T.isLight?"#ff9100":"#ffd54f",background:T.isLight?"rgba(255,145,0,.08)":"rgba(255,213,79,.08)",borderColor:T.isLight?"rgba(255,145,0,.25)":"rgba(255,213,79,.25)" }}>{T.isLight?"☀":"🌙"}</button>
+          <button onClick={function(){setSoundOn(!soundOn)}} style={{ ...B("4px 7px"),color:soundOn?"#00e676":T.textDim,background:soundOn?"rgba(0,230,118,.08)":T.surfaceAlt }}>{soundOn?"ON":"OFF"}</button>
+          <button onClick={clearAll} style={{ ...B("4px 7px"),color:"#ef5350",borderColor:"rgba(255,80,80,.2)",background:"rgba(255,80,80,.08)" }}>Clear</button>
         </div>
       </header>
 
@@ -9928,7 +9978,7 @@ function LabCraft(props) {
           ["badges","Badges "+earnedAch.length],
           ["stats","Stats"]
         ].map(function(pair) {
-          return <button key={pair[0]} onClick={function(){setTab(pair[0]);playBeep("tick");}} style={{ flex:1,padding:"11px 8px",fontSize:13,fontWeight:700,fontFamily:"inherit",cursor:"pointer",border:"none",borderBottom:tab===pair[0]?"2px solid #00e676":"2px solid transparent",background:"transparent",color:tab===pair[0]?"#00e676":T.textDim,whiteSpace:"nowrap",minWidth:0 }}>{pair[1]}</button>;
+          return <button key={pair[0]} onClick={function(){setTab(pair[0]);playBeep("tick");}} style={{ flex:"1 0 auto",flexShrink:0,padding:"11px 12px",fontSize:13,fontWeight:700,fontFamily:"inherit",cursor:"pointer",border:"none",borderBottom:tab===pair[0]?"2px solid #00e676":"2px solid transparent",background:"transparent",color:tab===pair[0]?"#00e676":T.textDim,whiteSpace:"nowrap" }}>{pair[1]}</button>;
         })}
       </div>
 
@@ -9961,6 +10011,8 @@ function LabCraft(props) {
           startTimed={startTimed}
           timedActive={timedActive}
           setTab={setTab}
+          isPro={props.isPro}
+          onOpenPro={props.onOpenPro}
         />
 
         {result && <div style={{ margin:"8px 14px 0",background:T.isLight?"rgba(255,255,255,.9)":"rgba(6,10,18,.9)",border:"1px solid "+T.headerBorder,borderRadius:12,padding:10,animation:"fadeUp .4s ease-out" }}>
@@ -10105,30 +10157,51 @@ function LabCraft(props) {
           <div style={{ fontSize:13,fontWeight:700,color: T.isLight ? "#b45309" : "#ffd700",marginBottom:4 }}>⏱️ 60-SECOND SPEED CHALLENGE</div>
           <div style={{ fontSize:12,color:T.text,marginBottom:8 }}>Find as many reactions as you can before the clock expires!</div>
           {timedBest !== null && <div style={{ fontSize:14,color:"#00e676",fontWeight:700,marginBottom:8 }}>Personal Best: {timedBest} reactions in 60s</div>}
-                    <button
-            onClick={function(){ setShowScientistID(true); playBeep("tick"); }}
-            style={{
-              padding:"5px 12px",borderRadius:14,fontSize:11,fontWeight:800,fontFamily:"inherit",cursor:"pointer",
-              background:"linear-gradient(135deg,rgba(0,230,118,.2),rgba(0,229,255,.2))",
-              border:"1px solid rgba(0,230,118,.5)",color:"#00e676"
-            }}
-          >
-            🪪 Scientist ID
-          </button>
-          <button
-            onClick={function(){ setShowMegaFX(true); playBeep("tick"); }}
-            style={{
-              padding:"5px 12px",borderRadius:14,fontSize:11,fontWeight:800,fontFamily:"inherit",cursor:"pointer",
-              background:"linear-gradient(135deg,rgba(0,229,255,.2),rgba(255,64,129,.2))",
-              border:"1.5px solid rgba(0,229,255,.5)",color:"#00e5ff",
-              boxShadow:"0 2px 10px rgba(0,229,255,.25)",display:"flex",alignItems:"center",gap:4
-            }}
-          >
-            <span>💥</span>
-            <span>Mega FX Studio</span>
-            <span style={{ fontSize:8,background:"#ff1744",color:"#fff",padding:"1px 4px",borderRadius:4,fontWeight:900 }}>VIRAL</span>
-          </button>
+          <div style={{ display:"flex",flexWrap:"wrap",gap:8,marginBottom:10 }}>
+            <button
+              onClick={function(){ setShowScientistID(true); playBeep("tick"); }}
+              style={{
+                padding:"6px 12px",borderRadius:14,fontSize:11,fontWeight:800,fontFamily:"inherit",cursor:"pointer",
+                background:"linear-gradient(135deg,rgba(0,230,118,.2),rgba(0,229,255,.2))",
+                border:"1px solid rgba(0,230,118,.5)",color:"#00e676"
+              }}
+            >
+              🪪 Scientist ID
+            </button>
+            <button
+              onClick={function(){ setShowMegaFX(true); playBeep("tick"); }}
+              style={{
+                padding:"6px 12px",borderRadius:14,fontSize:11,fontWeight:800,fontFamily:"inherit",cursor:"pointer",
+                background:"linear-gradient(135deg,rgba(0,229,255,.2),rgba(255,64,129,.2))",
+                border:"1.5px solid rgba(0,229,255,.5)",color:"#00e5ff",
+                boxShadow:"0 2px 10px rgba(0,229,255,.25)",display:"flex",alignItems:"center",gap:4
+              }}
+            >
+              <span>💥</span>
+              <span>Mega FX Studio</span>
+              <span style={{ fontSize:8,background:"#ff1744",color:"#fff",padding:"1px 4px",borderRadius:4,fontWeight:900 }}>VIRAL</span>
+            </button>
+          </div>
           {!timedActive && <button onClick={function(){startTimed();setTab("lab")}} style={{ width:"100%",padding:10,background:"linear-gradient(135deg,#ffd700,#ff9100)",border:"none",borderRadius:8,fontSize:14,fontWeight:800,color:"#000",cursor:"pointer",fontFamily:"inherit" }}>START 60s CHALLENGE</button>}
+        </div>
+
+        <div style={{ background:props.isPro?"rgba(0,230,118,.08)":"linear-gradient(135deg,rgba(255,215,0,.1),rgba(255,145,0,.08))",border:"1.5px solid "+(props.isPro?"rgba(0,230,118,.4)":"rgba(255,215,0,.45)"),borderRadius:10,padding:12,marginBottom:12 }}>
+          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",gap:8 }}>
+            <div>
+              <div style={{ fontSize:13,fontWeight:900,color:props.isPro?"#00e676":"#ffd700" }}>
+                {props.isPro ? "👑 LAB CRAFT PRO ACTIVE" : "👑 UPGRADE TO LAB CRAFT PRO"}
+              </div>
+              <div style={{ fontSize:11,color:T.textDim,marginTop:2 }}>
+                {props.isPro ? "Ad-free offline lab unlocked (" + (props.billingState && props.billingState.activePlan === "lifetime" ? "Lifetime Pass" : "Monthly PRO") + ")" : "100% Ad-Free Lab • " + ((props.billingState && props.billingState.monthlyPrice) || "₹199") + "/mo or " + ((props.billingState && props.billingState.lifetimePrice) || "₹999") + " Lifetime"}
+              </div>
+            </div>
+            <button
+              onClick={function(){ if (props.onOpenPro) props.onOpenPro(); playBeep("tick"); }}
+              style={{ padding:"7px 12px",borderRadius:8,border:"none",background:props.isPro?"rgba(0,230,118,.2)":"linear-gradient(135deg,#ffd700,#ff9100)",color:props.isPro?"#00e676":"#000",fontSize:11,fontWeight:900,cursor:"pointer",fontFamily:"inherit",flexShrink:0 }}
+            >
+              {props.isPro ? "MANAGE" : "GO PRO"}
+            </button>
+          </div>
         </div>
 
         <div style={{ background:T.surfaceAlt,border:"1px solid "+T.borderSoft,borderRadius:10,padding:12,marginBottom:14 }}>
@@ -10219,7 +10292,8 @@ function MainMenu(props) {
   var subColor = isLight ? "#5a6378" : "#7a8599";
   var footColor = isLight ? "#8a94a6" : "#4a5266";
   return (
-    <div style={{ position:"fixed",inset:0,background:bgGrad,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",fontFamily:"'Courier New',monospace",padding:24 }}>
+    <div style={{ position:"fixed",inset:0,background:bgGrad,overflowY:"auto",fontFamily:"'Courier New',monospace",padding:"20px 24px 28px",display:"flex",flexDirection:"column",alignItems:"center" }}>
+      <div style={{ width:"100%",maxWidth:360,margin:"auto 0",display:"flex",flexDirection:"column",alignItems:"center" }}>
       <button
         onClick={function(){props.setTheme(isLight?"dark":"light")}}
         style={{ position:"absolute",top:16,right:16,width:38,height:38,borderRadius:"50%",border:"1px solid "+(isLight?"rgba(0,0,0,.15)":"rgba(255,255,255,.15)"),background:isLight?"rgba(255,255,255,.6)":"rgba(255,255,255,.05)",fontSize:16,cursor:"pointer",fontFamily:"inherit" }}
@@ -10368,8 +10442,210 @@ function MainMenu(props) {
         <span style={{ fontSize: 13, color: "#40c4ff", fontWeight: 900 }}>➔</span>
       </button>
 
+      <button
+        onClick={props.onOpenPro}
+        style={{
+          marginTop: 10, padding: "10px 14px",
+          background: props.isPro
+            ? (isLight ? "rgba(0,230,118,.14)" : "rgba(0,230,118,.16)")
+            : (isLight ? "linear-gradient(135deg,rgba(255,215,0,.16),rgba(255,145,0,.14))" : "linear-gradient(135deg,rgba(255,215,0,.18),rgba(255,145,0,.14))"),
+          border: props.isPro ? "1.5px solid #00e676" : "1.5px solid rgba(255,215,0,.55)",
+          borderRadius: 12, cursor: "pointer", fontFamily: "inherit",
+          display: "flex", alignItems: "center", gap: 10,
+          maxWidth: 320, width: "100%",
+          boxShadow: props.isPro ? "0 2px 12px rgba(0,230,118,.22)" : "0 2px 14px rgba(255,215,0,.22)"
+        }}
+      >
+        <span style={{ fontSize: 22 }}>👑</span>
+        <div style={{ textAlign: "left", minWidth: 0, flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ fontSize: 8, fontWeight: 900, color: props.isPro ? "#00e676" : "#ffd700", letterSpacing: 0.8, background: props.isPro ? "rgba(0,230,118,.2)" : "rgba(255,215,0,.2)", padding: "1px 5px", borderRadius: 4 }}>
+              {props.isPro ? "PRO UNLOCKED" : "AD-FREE PASS"}
+            </span>
+            <span style={{ fontSize: 8, color: isLight ? "#b45309" : "#ffd700", fontWeight: 800 }}>
+              {props.isPro ? "✓ ZERO ADS" : ((props.billingState && props.billingState.monthlyPrice) || "₹199") + "/mo • " + ((props.billingState && props.billingState.lifetimePrice) || "₹999")}
+            </span>
+          </div>
+          <div style={{ fontSize: 11, fontWeight: 900, color: isLight ? "#1a1f2c" : "#fff", marginTop: 2 }}>
+            {props.isPro ? "LAB CRAFT PRO ACTIVE" : "REMOVE ADS • LAB CRAFT PRO"}
+          </div>
+          <div style={{ fontSize: 10, color: subColor, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {props.isPro ? "Offline Ad-Free Lab Unlocked • Manage Plan" : "Monthly " + ((props.billingState && props.billingState.monthlyPrice) || "₹199") + "/mo or One-Time " + ((props.billingState && props.billingState.lifetimePrice) || "₹999") + " Lifetime"}
+          </div>
+        </div>
+        <span style={{ fontSize: 13, color: props.isPro ? "#00e676" : "#ffd700", fontWeight: 900 }}>➔</span>
+      </button>
+
       <div style={{ marginTop:24,fontSize:11,color:footColor,letterSpacing:1,textAlign:"center" }}>
         v2.8 • Mega FX Reactions (Elephant Toothpaste & Luminol) • Chemle • Desi Periodic Tricks (NEET/JEE) • Flame Test • Titration Lab • 54+ Reactions • Flashcards • Offline Ready
+      </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══ LAB CRAFT PRO PAYWALL MODAL (Google Play Billing) ═══ */
+function ProUpgradeModal(props) {
+  var billing = props.billingState || {};
+  var isPro = !!billing.isPro;
+  var activePlan = billing.activePlan || "";
+  var monthlyPrice = billing.monthlyPrice || "₹199";
+  var lifetimePrice = billing.lifetimePrice || "₹999";
+  var isLight = props.theme === "light";
+  var bg = isLight ? "#ffffff" : "#0b101d";
+  var cardBg = isLight ? "#f4f7fb" : "rgba(255,255,255,0.04)";
+  var text = isLight ? "#1a1f2c" : "#eef2ff";
+  var dim = isLight ? "#5a6378" : "#94a3b8";
+
+  var [selectedPlan, setSelectedPlan] = useState("lifetime");
+  var [busy, setBusy] = useState(false);
+
+  useEffect(function() {
+    if (props.billingFeedback) setBusy(false);
+  }, [props.billingFeedback]);
+
+  useEffect(function() {
+    return window.pushBackHandler(function() {
+      props.onClose();
+      return true;
+    });
+  }, [props.onClose]);
+
+  function handleSubscribeOrBuy(plan) {
+    setBusy(true);
+    playBeep("tick");
+    props.onPurchase(plan);
+    setTimeout(function() { setBusy(false); }, 4000);
+  }
+
+  function handleRestore() {
+    setBusy(true);
+    playBeep("tick");
+    props.onRestore();
+    setTimeout(function() { setBusy(false); }, 4000);
+  }
+
+  return (
+    <div
+      style={{ position:"fixed",inset:0,zIndex:10050,background:"rgba(3,5,14,0.92)",backdropFilter:"blur(10px)",display:"flex",alignItems:"center",justifyContent:"center",padding:14,overflowY:"auto",fontFamily:"'SF Mono','Fira Code','Courier New',monospace" }}
+      onClick={props.onClose}
+    >
+      <div
+        onClick={function(e){ e.stopPropagation(); }}
+        style={{ width:"100%",maxWidth:420,maxHeight:"92vh",overflowY:"auto",background:bg,border:"2px solid "+(isPro?"#00e676":"#ffd700"),borderRadius:20,padding:18,boxShadow:isPro?"0 14px 48px rgba(0,230,118,.28)":"0 14px 48px rgba(255,215,0,.28)",color:text }}
+      >
+        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12 }}>
+          <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+            <div style={{ width:42,height:42,borderRadius:12,background:isPro?"rgba(0,230,118,.15)":"rgba(255,215,0,.15)",border:"1.5px solid "+(isPro?"#00e676":"#ffd700"),display:"flex",alignItems:"center",justifyContent:"center",fontSize:22 }}>
+              👑
+            </div>
+            <div>
+              <div style={{ fontSize:16,fontWeight:900,color:isPro?"#00e676":"#ffd700",letterSpacing:0.6 }}>
+                {isPro ? "LAB CRAFT PRO ACTIVE" : "LAB CRAFT PRO"}
+              </div>
+              <div style={{ fontSize:11,color:dim }}>
+                {isPro ? (activePlan === "lifetime" ? "Lifetime Ad-Free Pass Active" : "Monthly PRO Subscription Active") : "100% Ad-Free Chemistry Sandbox"}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={props.onClose}
+            style={{ width:30,height:30,borderRadius:"50%",border:"none",background:cardBg,color:dim,fontSize:16,cursor:"pointer" }}
+          >✕</button>
+        </div>
+
+        <div style={{ background:cardBg,border:"1px solid "+(isLight?"rgba(0,0,0,.08)":"rgba(255,255,255,.08)"),borderRadius:12,padding:12,marginBottom:14,display:"flex",flexDirection:"column",gap:7,fontSize:12 }}>
+          <div style={{ display:"flex",alignItems:"center",gap:8 }}><span>🚫</span><span><strong>Zero Banner & Zero Interstitial Ads</strong> across all labs</span></div>
+          <div style={{ display:"flex",alignItems:"center",gap:8 }}><span>⚡</span><span><strong>Pure Distraction-Free Study</strong> for NEET, JEE & Chemle</span></div>
+          <div style={{ display:"flex",alignItems:"center",gap:8 }}><span>📡</span><span><strong>100% Offline Ready</strong> — works smoothly in every region</span></div>
+          <div style={{ display:"flex",alignItems:"center",gap:8 }}><span>🏅</span><span><strong>Support Lab Craft</strong> new reactions & simulations</span></div>
+        </div>
+
+        {props.billingFeedback && (
+          <div style={{
+            marginBottom:12,padding:"8px 12px",borderRadius:10,fontSize:11,fontWeight:700,lineHeight:1.4,
+            background:props.billingFeedback.status==="purchased"?"rgba(0,230,118,.15)":props.billingFeedback.status==="pending"?"rgba(255,215,0,.15)":"rgba(64,196,255,.12)",
+            border:"1px solid "+(props.billingFeedback.status==="purchased"?"#00e676":props.billingFeedback.status==="pending"?"#ffd700":"#40c4ff"),
+            color:text
+          }}>
+            {props.billingFeedback.message}
+          </div>
+        )}
+
+        {!isPro && (
+          <div style={{ display:"flex",flexDirection:"column",gap:10,marginBottom:14 }}>
+            {/* Plan 1: Monthly Subscription ₹199/month */}
+            <div
+              onClick={function(){ setSelectedPlan("monthly"); playBeep("tick"); }}
+              style={{
+                padding:12,borderRadius:14,cursor:"pointer",
+                background:selectedPlan==="monthly"?"rgba(0,229,255,.12)":cardBg,
+                border:selectedPlan==="monthly"?"2px solid #00e5ff":("1.5px solid "+(isLight?"rgba(0,0,0,.1)":"rgba(255,255,255,.1)")),
+                display:"flex",justifyContent:"space-between",alignItems:"center",gap:10
+              }}
+            >
+              <div>
+                <div style={{ fontSize:10,fontWeight:900,color:"#00e5ff",letterSpacing:0.8 }}>MONTHLY SUBSCRIPTION</div>
+                <div style={{ fontSize:14,fontWeight:900,marginTop:2 }}>Lab Craft PRO Monthly</div>
+                <div style={{ fontSize:10,color:dim,marginTop:2 }}>Auto-renews monthly • Cancel anytime</div>
+              </div>
+              <div style={{ textAlign:"right",flexShrink:0 }}>
+                <div style={{ fontSize:18,fontWeight:900,color:"#00e5ff" }}>{monthlyPrice}</div>
+                <div style={{ fontSize:10,color:dim }}>/ month</div>
+              </div>
+            </div>
+
+            {/* Plan 2: Lifetime One-Time Purchase ₹999 */}
+            <div
+              onClick={function(){ setSelectedPlan("lifetime"); playBeep("tick"); }}
+              style={{
+                position:"relative",padding:12,borderRadius:14,cursor:"pointer",
+                background:selectedPlan==="lifetime"?"rgba(255,215,0,.14)":cardBg,
+                border:selectedPlan==="lifetime"?"2px solid #ffd700":("1.5px solid "+(isLight?"rgba(0,0,0,.1)":"rgba(255,255,255,.1)")),
+                display:"flex",justifyContent:"space-between",alignItems:"center",gap:10
+              }}
+            >
+              <span style={{ position:"absolute",top:-9,right:12,background:"linear-gradient(135deg,#ffd700,#ff9100)",color:"#000",fontSize:9,fontWeight:900,padding:"2px 8px",borderRadius:10 }}>
+                BEST VALUE • ONE-TIME
+              </span>
+              <div>
+                <div style={{ fontSize:10,fontWeight:900,color:"#ffd700",letterSpacing:0.8 }}>ONE-TIME PURCHASE</div>
+                <div style={{ fontSize:14,fontWeight:900,marginTop:2 }}>Lifetime Pro Unlock</div>
+                <div style={{ fontSize:10,color:dim,marginTop:2 }}>Pay once, keep Ad-Free forever</div>
+              </div>
+              <div style={{ textAlign:"right",flexShrink:0 }}>
+                <div style={{ fontSize:18,fontWeight:900,color:"#ffd700" }}>{lifetimePrice}</div>
+                <div style={{ fontSize:10,color:dim }}>one-time</div>
+              </div>
+            </div>
+
+            <button
+              onClick={function(){ handleSubscribeOrBuy(selectedPlan); }}
+              disabled={busy}
+              style={{
+                width:"100%",padding:"13px 16px",borderRadius:12,border:"none",cursor:busy?"wait":"pointer",
+                background:selectedPlan==="lifetime"?"linear-gradient(135deg,#ffd700,#ff9100)":"linear-gradient(135deg,#00e5ff,#00e676)",
+                color:"#000",fontSize:14,fontWeight:900,fontFamily:"inherit",letterSpacing:0.5,
+                boxShadow:"0 4px 18px rgba(255,215,0,.28)",opacity:busy?0.75:1
+              }}
+            >
+              {busy ? "CONNECTING GOOGLE PLAY..." : (selectedPlan==="lifetime" ? ("UNLOCK LIFETIME FOR " + lifetimePrice) : ("SUBSCRIBE FOR " + monthlyPrice + " / MONTH"))}
+            </button>
+          </div>
+        )}
+
+        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,paddingTop:8,borderTop:"1px solid "+(isLight?"rgba(0,0,0,.08)":"rgba(255,255,255,.08)") }}>
+          <button
+            onClick={handleRestore}
+            disabled={busy}
+            style={{ background:"transparent",border:"1px solid "+(isLight?"rgba(0,0,0,.18)":"rgba(255,255,255,.2)"),borderRadius:8,padding:"7px 12px",color:dim,fontSize:11,fontWeight:800,cursor:"pointer",fontFamily:"inherit" }}
+          >
+            🔄 Restore Purchase
+          </button>
+          <span style={{ fontSize:9.5,color:dim,textAlign:"right" }}>
+            Billed securely via Google Play
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -10394,6 +10670,81 @@ function App() {
       return localStorage.getItem("labcraft_v2_theme") || "dark";
     } catch(e) { return "dark"; }
   });
+
+  const [billingState, setBillingState] = useState(function() {
+    var fallback = {
+      isPro: false,
+      activePlan: "",
+      monthlyPrice: "₹199",
+      lifetimePrice: "₹999",
+      storeReady: false
+    };
+    try {
+      if (window.Android && typeof window.Android.getBillingStateJson === "function") {
+        var parsed = JSON.parse(window.Android.getBillingStateJson());
+        window._labCraftIsPro = !!parsed.isPro;
+        return parsed;
+      }
+    } catch(e) {}
+    return fallback;
+  });
+  const [showProModal, setShowProModal] = useState(false);
+  const [billingFeedback, setBillingFeedback] = useState(null);
+
+  useEffect(function() {
+    window.onLabCraftBillingUpdate = function(nextState) {
+      if (!nextState) return;
+      window._labCraftIsPro = !!nextState.isPro;
+      setBillingState(nextState);
+    };
+    window.onLabCraftBillingEvent = function(evt) {
+      if (!evt) return;
+      setBillingFeedback(evt);
+      if (evt.status === "purchased") {
+        try {
+          playBeep("achievement");
+          triggerHaptic("achievement");
+          triggerConfettiBurst();
+        } catch(e) {}
+      }
+    };
+    return function() {
+      window.onLabCraftBillingUpdate = null;
+      window.onLabCraftBillingEvent = null;
+    };
+  }, []);
+
+  const handleOpenPro = useCallback(function() {
+    setBillingFeedback(null);
+    setShowProModal(true);
+  }, []);
+
+  const handlePurchasePlan = useCallback(function(planType) {
+    if (window.Android && typeof window.Android.purchasePro === "function") {
+      try {
+        window.Android.purchasePro(planType);
+      } catch(e) {
+        setBillingFeedback({ status: "error", message: "Failed to start Google Play checkout." });
+      }
+    } else {
+      setBillingFeedback({
+        status: "info",
+        message: "Preview mode: Google Play Billing checkout (" + (planType === "lifetime" ? "₹999 one-time" : "₹199/month") + ") runs inside the Android app."
+      });
+    }
+  }, []);
+
+  const handleRestorePurchases = useCallback(function() {
+    if (window.Android && typeof window.Android.restorePurchases === "function") {
+      try {
+        window.Android.restorePurchases();
+      } catch(e) {
+        setBillingFeedback({ status: "error", message: "Could not contact Google Play." });
+      }
+    } else {
+      setBillingFeedback({ status: "info", message: "Preview mode: Restore Purchases works on Android devices signed in with Google Play." });
+    }
+  }, []);
 
   useEffect(function() {
     try { localStorage.setItem("labcraft_v2_theme", theme); } catch(e){}
@@ -10462,9 +10813,46 @@ function App() {
     }, 50);
   }, []);
 
-  if (screen === "menu") return <MainMenu onPlay={handlePlay} onOpenMole={handleOpenMole} onOpenPeriodic={handleOpenPeriodic} onOpenChemle={handleOpenChemle} onOpenMegaFX={handleOpenMegaFX} onOpenScientistID={handleOpenScientistID} theme={theme} setTheme={setTheme} />;
-  if (screen === "loading") return <LoadingDialog message="PREPARING LAB" sub="Setting up elements & reactions" />;
-  return <LabCraft theme={theme} setTheme={setTheme} initialTab={initialTab} />;
+  return (
+    <React.Fragment>
+      {screen === "menu" && (
+        <MainMenu
+          onPlay={handlePlay}
+          onOpenMole={handleOpenMole}
+          onOpenPeriodic={handleOpenPeriodic}
+          onOpenChemle={handleOpenChemle}
+          onOpenMegaFX={handleOpenMegaFX}
+          onOpenScientistID={handleOpenScientistID}
+          onOpenPro={handleOpenPro}
+          isPro={!!billingState.isPro}
+          billingState={billingState}
+          theme={theme}
+          setTheme={setTheme}
+        />
+      )}
+      {screen === "loading" && <LoadingDialog message="PREPARING LAB" sub="Setting up elements & reactions" />}
+      {screen !== "menu" && screen !== "loading" && (
+        <LabCraft
+          theme={theme}
+          setTheme={setTheme}
+          initialTab={initialTab}
+          isPro={!!billingState.isPro}
+          billingState={billingState}
+          onOpenPro={handleOpenPro}
+        />
+      )}
+      {showProModal && (
+        <ProUpgradeModal
+          theme={theme}
+          billingState={billingState}
+          billingFeedback={billingFeedback}
+          onPurchase={handlePurchasePlan}
+          onRestore={handleRestorePurchases}
+          onClose={function(){ setShowProModal(false); }}
+        />
+      )}
+    </React.Fragment>
+  );
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root'));

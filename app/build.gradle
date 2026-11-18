@@ -11,8 +11,10 @@ android {
         applicationId "com.royals.labcraft"
         minSdk 24
         targetSdk 36
-        versionCode 17
-        versionName "2.6.1"
+        versionCode 18
+        versionName "2.7.0"
+        buildConfigField "String", "PRO_MONTHLY_PRODUCT_ID", '"labcraft_pro_monthly"'
+        buildConfigField "String", "PRO_LIFETIME_PRODUCT_ID", '"labcraft_pro_lifetime"'
     }
 
     buildFeatures {
@@ -69,4 +71,5 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'androidx.webkit:webkit:1.12.1'
     implementation 'com.google.android.gms:play-services-ads:23.6.0'
+    implementation 'com.android.billingclient:billing:8.3.0'
 }
